@@ -603,6 +603,12 @@ function renderFlota(seg){
 //  RENDER CLIENTES
 // ─────────────────────────────────────────────
 function renderClientes(clientes){
+  if(!clientes||!clientes.length){
+    document.getElementById('kpi-clientes').innerHTML='<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Pendiente</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans;line-height:1.4">Agrega la columna TARIFA CLIENTE en tu hoja REGISTRO DE OPERACIONES para activar esta sección.</div></div>';
+    document.getElementById('client-tbody').innerHTML='<tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center">Sin datos de TARIFA CLIENTE aún</td></tr>';
+    document.getElementById('rank-clientes').innerHTML='<div style="font-size:12px;color:var(--muted);padding:16px 0;text-align:center">Sin datos aún</div>';
+    return;
+  }
   const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
   const tF=clientes.reduce((s,c)=>s+c.facturado,0);
   const mx=sorted[0]?.facturado||1;
@@ -646,8 +652,15 @@ function renderClientes(clientes){
 //  RENDER ANALISTAS
 // ─────────────────────────────────────────────
 function renderAnalistas(clientes,analistas){
+  if(!analistas||!analistas.length){
+    document.getElementById('kpi-analistas').innerHTML='<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Pendiente</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans">Crea la hoja ANALISTAS con columnas NOMBRE, META, COLOR para activar esta sección.</div></div>';
+    document.getElementById('rank-analistas').innerHTML='';
+    document.getElementById('analyst-bars').innerHTML='';
+    document.getElementById('analyst-grid').innerHTML='';
+    return;
+  }
   const data=analistas.map(a=>{
-    const cli=clientes.filter(c=>c.analista===a.nombre);
+    const cli=(clientes||[]).filter(c=>c.analista===a.nombre);
     const tR=cli.reduce((s,c)=>s+c.facturado,0);
     const p=a.meta>0?Math.round((tR/a.meta)*100):0;
     return{...a,tR,p,cli};
