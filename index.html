@@ -425,8 +425,26 @@ function pMoney(v){
 }
 
 async function cargarDesdeSheet(id){
-  const [filasSeg, filasReg, filasAna] = await Promise.all([
-    fetchCSV(id,'MARZO'),
+  // Cargar hoja MARZO y mostrar diagnóstico si falla
+  let filasSeg, filasReg, filasAna;
+  try {
+    document.getElementById('spinner-txt').textContent='Cargando hoja MARZO...';
+    filasSeg = await fetchCSV(id,'MARZO');
+  } catch(e) {
+    throw new Error('No se pudo leer la hoja MARZO: ' + e.message);
+  }
+
+  // Diagnóstico: mostrar primeras columnas encontradas
+  if(filasSeg.length > 0) {
+    const cols = Object.keys(filasSeg[0]);
+    console.log('Columnas encontradas en MARZO:', cols);
+    console.log('Primera fila:', filasSeg[0]);
+  } else {
+    throw new Error('La hoja MARZO está vacía o no tiene datos.');
+  }
+
+  document.getElementById('spinner-txt').textContent='Cargando otras hojas...';
+  [filasReg, filasAna] = await Promise.all([
     fetchCSVOpcional(id,'REGISTRO DE OPERACIONES'),
     fetchCSVOpcional(id,'ANALISTAS'),
   ]);
