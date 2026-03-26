@@ -467,6 +467,7 @@ async function cargarDesdeSheet(id){
       razon:    r['RAZON PARO']||r['RAZÓN PARO']||'',
       analista: r['ANALISTA']||'Sin asignar',
       real:     pMoney(colReal ? r[colReal] : (r['PRODUCCION REAL']||r['PRODUCCIÓN REAL']||'0')),
+      estado:   (r['ESTADO']||'ACTIVO').trim().toUpperCase(),
     }));
 
   if(!seg.length) throw new Error('La hoja "MARZO" no tiene datos o las columnas no coinciden. Verifica que la fila 1 tenga los encabezados: PLACAS, META MES, CONDUCTOR, FUERA DE SERVICIO (DIAS), PRODUCCION REAL.');
@@ -551,7 +552,7 @@ function actualizarBanner(id){
 //  RENDER FLOTA
 // ─────────────────────────────────────────────
 function renderFlota(seg){
-  const act=seg.filter(v=>v.oo===0), oos=seg.filter(v=>v.oo>0);
+  const act=seg.filter(v=>v.estado!=='PARO'), oos=seg.filter(v=>v.estado==='PARO');
   const tMeta=seg.reduce((s,v)=>s+v.meta,0);
   const tReal=seg.reduce((s,v)=>s+v.real,0);
   const metaDia=tMeta*PROG;
@@ -573,7 +574,7 @@ function renderFlota(seg){
     tb.innerHTML+=`<tr>
       <td class="plate">${v.p}</td>
       <td style="font-size:11px;color:var(--muted2);max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
-      <td>${esOos?`<span class="chip r">${v.oo}d paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
+      <td>${v.estado==='PARO'?`<span class="chip r">${v.oo>0?v.oo+'d ':''} Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
       <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
       <td class="num">${fmt(v.real)}</td>
       <td class="num">${fmt(v.meta)}</td>
