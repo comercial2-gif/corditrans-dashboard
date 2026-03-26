@@ -488,16 +488,19 @@ async function cargarDesdeSheet(id){
 
   // ANALISTAS — hoja dedicada o construir desde SEGUIMIENTO
   let analistas=[];
+  const COLS=['#1fc876','#4a9eff','#e8a020','#9b6fff','#ff6b6b','#00d4ff'];
   if(filasAna.length){
-    analistas=filasAna.map(r=>({
-      nombre:r['NOMBRE'],
-      meta:pMoney(r['META']),
-      color:r['COLOR']?(r['COLOR'].startsWith('#')?r['COLOR']:'#'+r['COLOR']):'#4a9eff',
-    }));
-  } else {
-    // Construir desde SEGUIMIENTO DIARIO automáticamente
+    analistas=filasAna
+      .filter(r=>(r['ANALISTA']||r['NOMBRE']||'').trim()!=='')
+      .map((r,i)=>({
+        nombre: (r['ANALISTA']||r['NOMBRE']||'').trim(),
+        meta:   pMoney(r['META MES']||r['META']||'0'),
+        color:  r['COLOR']?(r['COLOR'].startsWith('#')?r['COLOR']:'#'+r['COLOR']):COLS[i%COLS.length],
+      }));
+  }
+  // Si no hay analistas o quedó vacío, construir desde MARZO
+  if(!analistas.length){
     const nombres=[...new Set(seg.map(v=>v.analista).filter(a=>a&&a!=='Sin asignar'))];
-    const COLS=['#1fc876','#4a9eff','#e8a020','#9b6fff','#ff6b6b','#00d4ff'];
     analistas=nombres.map((nombre,i)=>({nombre,meta:0,color:COLS[i%COLS.length]}));
   }
 
