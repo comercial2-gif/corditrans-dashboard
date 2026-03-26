@@ -432,16 +432,24 @@ async function cargarDesdeSheet(id){
   ]);
 
   // HOJA MARZO — mapeo de columnas reales
+  // Buscar columna PRODUCCION REAL con cualquier variante
+  const colReal = filasSeg.length > 0
+    ? Object.keys(filasSeg[0]).find(k => k.replace(/\n/g,' ').replace(/[ÁÉÍÓÚÜ]/gi, c => ({A:'A',E:'E',I:'I',O:'O',U:'U'})[c.toUpperCase()]||c).toUpperCase().includes('PRODUCCION') && k.toUpperCase().includes('REAL'))
+    : null;
+
   const seg = filasSeg
-    .filter(r=>r['PLACAS']&&r['PLACAS']!=='Total'&&r['PLACAS']!=='')
-    .map(r=>({
-      p:        r['PLACAS'],
+    .filter(r => {
+      const p = (r['PLACAS']||'').trim();
+      return p && p !== 'Total' && p !== 'PLACAS' && /^[A-Z]{2,4}\d{3}/.test(p);
+    })
+    .map(r => ({
+      p:        (r['PLACAS']||'').trim(),
       c:        r['CONDUCTOR']||'',
       meta:     pMoney(r['META MES']),
       oo:       parseInt(r['FUERA DE SERVICIO (DIAS)'])||0,
-      razon:    r['RAZON PARO']||'',
+      razon:    r['RAZON PARO']||r['RAZÓN PARO']||'',
       analista: r['ANALISTA']||'Sin asignar',
-      real:     pMoney(r['PRODUCCION REAL']||r['PRODUCCIÓN REAL']||r['PRODUCCION\nREAL']||'0'),
+      real:     pMoney(colReal ? r[colReal] : (r['PRODUCCION REAL']||r['PRODUCCIÓN REAL']||'0')),
     }));
 
   if(!seg.length) throw new Error('La hoja "MARZO" no tiene datos o las columnas no coinciden. Verifica que la fila 1 tenga los encabezados: PLACAS, META MES, CONDUCTOR, FUERA DE SERVICIO (DIAS), PRODUCCION REAL.');
@@ -483,7 +491,12 @@ async function cargarDesdeSheet(id){
 
   MODO='live';
   actualizarBanner(id);
-  renderTodo(seg, clientes, analistas);
+  try {
+    renderTodo(seg, clientes, analistas);
+  } catch(e) {
+    console.error('Error en render:', e);
+    throw new Error('Error al procesar datos: ' + e.message + '. Abre la consola del navegador (F12) para más detalles.');
+  }
   setTimeout(animateBars,120);
 }
 
