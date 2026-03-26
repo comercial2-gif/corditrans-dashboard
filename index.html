@@ -567,9 +567,10 @@ function renderFlota(seg){
     <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
 
   const tb=document.getElementById('fleet-tbody');tb.innerHTML='';
-  seg.forEach(v=>{
+  const segSorted=[...seg].sort((a,b)=>{const pa=a.meta>0?a.real/a.meta:0,pb=b.meta>0?b.real/b.meta:0;return pb-pa;});
+  segSorted.forEach(v=>{
     const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.min(p,100),s=sem(p),esOos=v.oo>0;
-    tb.innerHTML+=`<tr style="${esOos?'opacity:.5':''}">
+    tb.innerHTML+=`<tr>
       <td class="plate">${v.p}</td>
       <td style="font-size:11px;color:var(--muted2);max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
       <td>${esOos?`<span class="chip r">${v.oo}d paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
