@@ -595,21 +595,29 @@ function renderFlota(seg){
   ol.innerHTML=oos.length?'':'<div style="font-size:12px;color:var(--muted);padding:10px 0;text-align:center">Sin vehículos fuera de servicio ✓</div>';
   oos.forEach(v=>{ol.innerHTML+=`<div class="oos-item"><div class="oos-plate">${v.p}</div><div class="oos-reason">${v.c}${v.razon?' · '+v.razon:''}</div><div class="oos-days">${v.oo}d</div></div>`;});
 
-  // Tabla días paro debajo del donut
+  // Lista días paro acumulados — solo los que tienen días > 0, ordenados mayor a menor
   const conParo=[...seg].filter(v=>v.oo>0).sort((a,b)=>b.oo-a.oo);
   const diasParoEl=document.getElementById('dias-paro-list');
   if(diasParoEl){
     if(!conParo.length){
-      diasParoEl.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0">Sin días de paro registrados ✓</div>';
+      diasParoEl.innerHTML='<div style="font-size:11px;color:var(--muted);padding:6px 0">Ningún vehículo con días de paro este mes ✓</div>';
     } else {
-      diasParoEl.innerHTML=conParo.map(v=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
-          <div>
-            <span style="font-family:'DM Mono';font-size:11px;font-weight:500">${v.p}</span>
-            <span style="font-size:10px;color:var(--muted2);margin-left:6px">${v.c.split(' ')[0]}</span>
+      const maxDias=conParo[0].oo;
+      diasParoEl.innerHTML=conParo.map(v=>{
+        const barW=Math.round((v.oo/maxDias)*100);
+        return `<div style="margin-bottom:9px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+            <div style="min-width:0;overflow:hidden">
+              <span style="font-family:'DM Mono';font-size:11px;font-weight:600;color:var(--text)">${v.p}</span>
+              <span style="font-size:10px;color:var(--muted2);margin-left:6px">${v.c.split(' ')[0]}</span>
+            </div>
+            <span style="font-family:'DM Mono';font-size:12px;font-weight:700;color:var(--red);flex-shrink:0;margin-left:8px">${v.oo}d</span>
           </div>
-          <span style="font-family:'DM Mono';font-size:12px;font-weight:600;color:var(--red)">${v.oo}d</span>
-        </div>`).join('');
+          <div style="height:4px;background:var(--border)">
+            <div style="height:100%;width:${barW}%;background:var(--red)"></div>
+          </div>
+        </div>`;
+      }).join('');
     }
   }
 
