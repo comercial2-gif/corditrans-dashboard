@@ -573,8 +573,6 @@ function renderFlota(seg){
 
   const tb=document.getElementById('fleet-tbody');tb.innerHTML='';
   const segSorted=[...seg].sort((a,b)=>{
-    // Primero ordenar por días de paro descendente, luego por cumplimiento descendente
-    if(b.oo!==a.oo) return b.oo-a.oo;
     const pa=a.meta>0?a.real/a.meta:0,pb=b.meta>0?b.real/b.meta:0;
     return pb-pa;
   });
