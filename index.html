@@ -753,7 +753,7 @@ function renderAnalistas(clientes,analistas){
     return{...a,tR,p,cli};
   });
   const sorted=[...data].sort((a,b)=>b.p-a.p);
-  const mx=sorted[0]?.tR||1;
+  const mx=sorted[0]?.p||1;
   const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
   const enV=data.filter(a=>a.p>=90).length;
   const enR=data.filter(a=>a.p<70).length;
@@ -767,7 +767,7 @@ function renderAnalistas(clientes,analistas){
 
   const rl=document.getElementById('rank-analistas');rl.innerHTML='';
   sorted.forEach((a,i)=>{
-    const bw=Math.round((a.tR/mx)*100);
+    const bw=Math.min(a.p,100);
     rl.innerHTML+=`<div class="rank-item">
       <div class="rank-n">${i+1}</div>
       <div style="flex:1"><div class="rank-name">${a.nombre}</div><div class="rank-sub">${a.cli.length} clientes</div></div>
