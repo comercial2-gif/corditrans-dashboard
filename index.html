@@ -493,18 +493,19 @@ async function cargarDesdeSheet(id){
   if(!seg.length) throw new Error('La hoja "MARZO" no tiene datos o las columnas no coinciden. Verifica que la fila 1 tenga los encabezados: PLACAS, META MES, CONDUCTOR, FUERA DE SERVICIO (DIAS), PRODUCCION REAL.');
 
   // TOTAL ANALISTAS → clientes y analistas (venta total propios + terceros)
-  const opsPorCliente={};
+  // Agrupar por ANALISTA+CLIENTE para soportar clientes con múltiples analistas
+  const opsPorKey={};
   filasReg.forEach(r=>{
     const cliente=(r['CLIENTE']||'').trim();
     const cobro=pMoney(r['COBRO REMESA']||'0');
     const analista=(r['ANALISTA']||'').trim();
     if(!cliente) return;
-    if(!opsPorCliente[cliente]) opsPorCliente[cliente]={ops:0,facturado:0,analista};
-    opsPorCliente[cliente].ops++;
-    opsPorCliente[cliente].facturado+=cobro;
-    if(analista&&!opsPorCliente[cliente].analista) opsPorCliente[cliente].analista=analista;
+    const key=analista+'|||'+cliente;
+    if(!opsPorKey[key]) opsPorKey[key]={ops:0,facturado:0,analista,cliente};
+    opsPorKey[key].ops++;
+    opsPorKey[key].facturado+=cobro;
   });
-  const clientes=Object.entries(opsPorCliente).map(([nombre,d])=>({nombre,...d}));
+  const clientes=Object.values(opsPorKey).map(d=>({nombre:d.cliente,analista:d.analista,ops:d.ops,facturado:d.facturado}));
 
   // ANALISTAS — hoja dedicada o construir desde SEGUIMIENTO
   let analistas=[];
@@ -900,18 +901,18 @@ function aplicarFiltroFecha(){
 
   // Recalcular clientes y analistas con filas filtradas
   const filasFiltradas = filtrarFilas(FILAS_TOTAL_ANALISTAS);
-  const opsPorCliente={};
+  const opsPorKey2={};
   filasFiltradas.forEach(r=>{
     const cliente=(r['CLIENTE']||'').trim();
     const cobro=pMoney(r['COBRO REMESA']||'0');
     const analista=(r['ANALISTA']||'').trim();
     if(!cliente) return;
-    if(!opsPorCliente[cliente]) opsPorCliente[cliente]={ops:0,facturado:0,analista};
-    opsPorCliente[cliente].ops++;
-    opsPorCliente[cliente].facturado+=cobro;
-    if(analista&&!opsPorCliente[cliente].analista) opsPorCliente[cliente].analista=analista;
+    const key=analista+'|||'+cliente;
+    if(!opsPorKey2[key]) opsPorKey2[key]={ops:0,facturado:0,analista,cliente};
+    opsPorKey2[key].ops++;
+    opsPorKey2[key].facturado+=cobro;
   });
-  const clientes=Object.entries(opsPorCliente).map(([nombre,d])=>({nombre,...d}));
+  const clientes=Object.values(opsPorKey2).map(d=>({nombre:d.cliente,analista:d.analista,ops:d.ops,facturado:d.facturado}));
   renderClientes(clientes);
   renderAnalistas(clientes, ANALISTAS_DATA);
   setTimeout(animateBars,50);
