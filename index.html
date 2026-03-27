@@ -255,6 +255,14 @@
   </div>
 
   <div class="section" id="sec-clientes">
+    <div id="filtro-clientes" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Filtrar por fecha</span>
+      <input type="date" id="cli-fecha-desde" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
+      <span style="font-size:11px;color:var(--muted2)">hasta</span>
+      <input type="date" id="cli-fecha-hasta" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
+      <button onclick="limpiarFiltroFecha()" style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer;border:1px solid var(--border2);color:var(--muted2);background:none;font-family:'DM Sans';">✕ Limpiar</button>
+      <span id="filtro-label" style="font-size:11px;color:var(--accent);margin-left:4px;"></span>
+    </div>
     <div class="kpi-strip" id="kpi-clientes"></div>
     <div class="row c53">
       <div class="card">
@@ -272,6 +280,14 @@
   </div>
 
   <div class="section" id="sec-analistas">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Filtrar por fecha</span>
+      <input type="date" id="ana-fecha-desde" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
+      <span style="font-size:11px;color:var(--muted2)">hasta</span>
+      <input type="date" id="ana-fecha-hasta" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
+      <button onclick="limpiarFiltroFecha()" style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer;border:1px solid var(--border2);color:var(--muted2);background:none;font-family:'DM Sans';">✕ Limpiar</button>
+      <span id="filtro-label-ana" style="font-size:11px;color:var(--accent);margin-left:4px;"></span>
+    </div>
     <div class="kpi-strip" id="kpi-analistas"></div>
     <div class="row c2" style="margin-bottom:14px">
       <div class="card">
@@ -514,6 +530,8 @@ async function cargarDesdeSheet(id){
   DIAS=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   PROG=DIA/DIAS;
 
+  FILAS_TOTAL_ANALISTAS=filasReg;
+  ANALISTAS_DATA=analistas;
   MODO='live';
   actualizarBanner(id);
   try {
@@ -810,6 +828,105 @@ function renderTodo(seg,cli,ana){
 
 function animateBars(){
   requestAnimationFrame(()=>{document.querySelectorAll('[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%';});});
+}
+
+function parseFecha(str){
+  // Soporta DD/MM/YYYY y variantes que Google Sheets exporta
+  if(!str) return null;
+  str = str.trim();
+  // DD/MM/YYYY
+  const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m1) return new Date(parseInt(m1[3]), parseInt(m1[2])-1, parseInt(m1[1]));
+  // YYYY-MM-DD
+  const m2 = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m2) return new Date(parseInt(m2[1]), parseInt(m2[2])-1, parseInt(m2[3]));
+  // M/D/YYYY (formato que a veces exporta Sheets)
+  const m3 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m3) return new Date(parseInt(m3[3]), parseInt(m3[1])-1, parseInt(m3[2]));
+  return null;
+}
+
+function getFiltroFechas(){
+  // Tomar fechas del filtro activo (clientes o analistas)
+  const secActiva = document.querySelector('.section.active')?.id;
+  const prefix = secActiva==='sec-analistas' ? 'ana' : 'cli';
+  const desde = document.getElementById(prefix+'-fecha-desde')?.value;
+  const hasta = document.getElementById(prefix+'-fecha-hasta')?.value;
+  return {
+    desde: desde ? new Date(desde) : null,
+    hasta: hasta ? new Date(hasta+'T23:59:59') : null
+  };
+}
+
+function filtrarFilas(filas){
+  const {desde, hasta} = getFiltroFechas();
+  if(!desde && !hasta) return filas;
+  return filas.filter(r=>{
+    const f = parseFecha(r['FECHA']||'');
+    if(!f) return true; // si no tiene fecha, incluir
+    if(desde && f < desde) return false;
+    if(hasta && f > hasta) return false;
+    return true;
+  });
+}
+
+function aplicarFiltroFecha(){
+  if(!FILAS_TOTAL_ANALISTAS.length) return;
+  const {desde, hasta} = getFiltroFechas();
+
+  // Sincronizar ambos filtros
+  const cliDesde = document.getElementById('cli-fecha-desde');
+  const cliHasta = document.getElementById('cli-fecha-hasta');
+  const anaDesde = document.getElementById('ana-fecha-desde');
+  const anaHasta = document.getElementById('ana-fecha-hasta');
+  const secActiva = document.querySelector('.section.active')?.id;
+
+  if(secActiva==='sec-analistas'){
+    if(cliDesde) cliDesde.value = anaDesde?.value||'';
+    if(cliHasta) cliHasta.value = anaHasta?.value||'';
+  } else {
+    if(anaDesde) anaDesde.value = cliDesde?.value||'';
+    if(anaHasta) anaHasta.value = cliHasta?.value||'';
+  }
+
+  // Actualizar label
+  const label = desde||hasta
+    ? `${desde?desde.toLocaleDateString('es-CO'):''} ${hasta?' → '+hasta.toLocaleDateString('es-CO'):''}`
+    : '';
+  ['filtro-label','filtro-label-ana'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=label;
+  });
+
+  // Recalcular clientes y analistas con filas filtradas
+  const filasFiltradas = filtrarFilas(FILAS_TOTAL_ANALISTAS);
+  const opsPorCliente={};
+  filasFiltradas.forEach(r=>{
+    const cliente=(r['CLIENTE']||'').trim();
+    const cobro=pMoney(r['COBRO REMESA']||'0');
+    const analista=(r['ANALISTA']||'').trim();
+    if(!cliente) return;
+    if(!opsPorCliente[cliente]) opsPorCliente[cliente]={ops:0,facturado:0,analista};
+    opsPorCliente[cliente].ops++;
+    opsPorCliente[cliente].facturado+=cobro;
+    if(analista&&!opsPorCliente[cliente].analista) opsPorCliente[cliente].analista=analista;
+  });
+  const clientes=Object.entries(opsPorCliente).map(([nombre,d])=>({nombre,...d}));
+  renderClientes(clientes);
+  renderAnalistas(clientes, ANALISTAS_DATA);
+  setTimeout(animateBars,50);
+}
+
+function limpiarFiltroFecha(){
+  ['cli-fecha-desde','cli-fecha-hasta','ana-fecha-desde','ana-fecha-hasta'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  ['filtro-label','filtro-label-ana'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent='';
+  });
+  aplicarFiltroFecha();
 }
 
 function showSec(name,btn){
