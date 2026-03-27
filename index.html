@@ -448,7 +448,7 @@ async function cargarDesdeSheet(id){
 
   document.getElementById('spinner-txt').textContent='Cargando otras hojas...';
   [filasReg, filasAna] = await Promise.all([
-    fetchCSVOpcional(id,'REGISTRO DE OPERACIONES'),
+    fetchCSVOpcional(id,'TOTAL ANALISTAS'),
     fetchCSVOpcional(id,'ANALISTAS'),
   ]);
 
@@ -476,16 +476,16 @@ async function cargarDesdeSheet(id){
 
   if(!seg.length) throw new Error('La hoja "MARZO" no tiene datos o las columnas no coinciden. Verifica que la fila 1 tenga los encabezados: PLACAS, META MES, CONDUCTOR, FUERA DE SERVICIO (DIAS), PRODUCCION REAL.');
 
-  // REGISTRO DE OPERACIONES → clientes
+  // TOTAL ANALISTAS → clientes y analistas (venta total propios + terceros)
   const opsPorCliente={};
   filasReg.forEach(r=>{
     const cliente=(r['CLIENTE']||'').trim();
-    const tarifa=pMoney(r['TARIFA CLIENTE']||'0');
+    const cobro=pMoney(r['COBRO REMESA']||'0');
     const analista=(r['ANALISTA']||'').trim();
     if(!cliente) return;
     if(!opsPorCliente[cliente]) opsPorCliente[cliente]={ops:0,facturado:0,analista};
     opsPorCliente[cliente].ops++;
-    opsPorCliente[cliente].facturado+=tarifa;
+    opsPorCliente[cliente].facturado+=cobro;
     if(analista&&!opsPorCliente[cliente].analista) opsPorCliente[cliente].analista=analista;
   });
   const clientes=Object.entries(opsPorCliente).map(([nombre,d])=>({nombre,...d}));
