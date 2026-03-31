@@ -275,7 +275,13 @@
       <div class="card">
         <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--yellow)"></span>Participación por Cliente</div></div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
-          <svg id="torta-svg" viewBox="0 0 220 220" width="220" height="220" style="flex-shrink:0;margin-top:8px;"></svg>
+          <div style="position:relative;width:220px;height:220px;flex-shrink:0;margin-top:8px;">
+            <canvas id="torta-canvas" width="220" height="220" style="cursor:pointer;"></canvas>
+            <div id="torta-center" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+              <div id="tc-val" style="font-family:'Bebas Neue';font-size:20px;color:var(--text);line-height:1;"></div>
+              <div id="tc-lbl" style="font-size:9px;color:var(--muted2);margin-top:2px;"></div>
+            </div>
+          </div>
           <div id="torta-legend" style="width:100%;display:flex;flex-direction:column;gap:5px;"></div>
         </div>
       </div>
@@ -724,47 +730,83 @@ function renderClientes(clientes){
   });
 
   // Torta de participación
-  const TORTA_COLORS=['#4a9eff','#f0a020','#1fc876','#c44fff','#e84040','#00d4b8','#ff6b35','#a8e063','#ff4da6','#ffd700','#7b68ee','#20c4d4'];
+  const TORTA_COLORS=['#4a9eff','#f0a020','#1fc876','#e84040','#c44fff','#ffd700','#ff6b35','#00d4b8','#ff4da6','#a8e063','#7b68ee','#20c4d4'];
   const top10=sorted.slice(0,10);
   const otrosTotal=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
   const tortaData=otrosTotal>0?[...top10,{nombre:'Otros',facturado:otrosTotal,analista:'',ops:0}]:top10;
   const totalTorta=tortaData.reduce((s,c)=>s+c.facturado,0)||1;
 
-  // Dibujar torta SVG
-  const svgEl=document.getElementById('torta-svg');
-  if(svgEl){
+  // Dibujar torta con Canvas
+  const canvas=document.getElementById('torta-canvas');
+  if(canvas){
+    const ctx=canvas.getContext('2d');
     const cx=110,cy=110,r=90,ri=50;
     let startAngle=-Math.PI/2;
-    let paths='';
+    const slices=[];
+
+    // Limpiar
+    ctx.clearRect(0,0,220,220);
+
     tortaData.forEach((c,i)=>{
       const pct=c.facturado/totalTorta;
       const angle=pct*2*Math.PI;
       const endAngle=startAngle+angle;
-      const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
-      const x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
-      const xi1=cx+ri*Math.cos(startAngle),yi1=cy+ri*Math.sin(startAngle);
-      const xi2=cx+ri*Math.cos(endAngle),  yi2=cy+ri*Math.sin(endAngle);
-      const large=angle>Math.PI?1:0;
       const col=TORTA_COLORS[i%TORTA_COLORS.length];
-      const midA=startAngle+angle/2;
-      const lx=cx+(r+8)*Math.cos(midA), ly=cy+(r+8)*Math.sin(midA);
-      const pctLabel=Math.round(pct*100);
-      paths+=`<path d="M${xi1},${yi1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${ri},${ri} 0 ${large},0 ${xi1},${yi1} Z"
-        fill="${col}" stroke="var(--bg)" stroke-width="1.5" opacity="0.92"
-        style="cursor:pointer;transition:opacity .15s"
-        onmouseenter="mostrarTooltip(event,'${c.nombre.replace(/'/g,'\'')}',' ${fmt(c.facturado)} · ${pctLabel}%','${col}')"
-        onmouseleave="ocultarTooltip()"/>`;
-      if(pct>0.05){
-        paths+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central"
-          font-family="DM Mono" font-size="9" fill="var(--text)" font-weight="500">${Math.round(pct*100)}%</text>`;
-      }
+
+      // Dibujar slice
+      ctx.beginPath();
+      ctx.moveTo(cx+ri*Math.cos(startAngle),cy+ri*Math.sin(startAngle));
+      ctx.lineTo(cx+r*Math.cos(startAngle),cy+r*Math.sin(startAngle));
+      ctx.arc(cx,cy,r,startAngle,endAngle);
+      ctx.lineTo(cx+ri*Math.cos(endAngle),cy+ri*Math.sin(endAngle));
+      ctx.arc(cx,cy,ri,endAngle,startAngle,true);
+      ctx.closePath();
+      ctx.fillStyle=col;
+      ctx.fill();
+      ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg')||'#0b0d12';
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+
+      // Guardar slice para hover
+      slices.push({startAngle,endAngle,col,nombre:c.nombre,facturado:c.facturado,pct:Math.round(pct*100)});
       startAngle=endAngle;
     });
+
     // Centro
-    paths+=`<circle cx="${cx}" cy="${cy}" r="${ri-2}" fill="var(--surface)"/>`;
-    paths+=`<text x="${cx}" y="${cy-7}" text-anchor="middle" font-family="Bebas Neue" font-size="18" fill="var(--text)">${fmt(totalTorta)}</text>`;
-    paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" font-family="DM Sans" font-size="9" fill="var(--muted2)">Total facturado</text>`;
-    svgEl.innerHTML=paths;
+    document.getElementById('tc-val').textContent=fmt(totalTorta);
+    document.getElementById('tc-lbl').textContent='Total facturado';
+
+    // Eventos hover en canvas
+    canvas.onmousemove=function(e){
+      const rect=canvas.getBoundingClientRect();
+      const mx=e.clientX-rect.left-cx, my=e.clientY-rect.top-cy;
+      const dist=Math.sqrt(mx*mx+my*my);
+      const tt=document.getElementById('chart-tooltip');
+      if(dist>=ri&&dist<=r){
+        let angle=Math.atan2(my,mx);
+        if(angle<-Math.PI/2) angle+=2*Math.PI;
+        const base=-Math.PI/2;
+        const norm=((angle-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+        const slice=slices.find(s=>{
+          const sa=((s.startAngle-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+          const ea=((s.endAngle-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+          return ea>sa?norm>=sa&&norm<=ea:norm>=sa||norm<=ea;
+        });
+        if(slice){
+          document.getElementById('tt-nombre').textContent=slice.nombre;
+          document.getElementById('tt-valor').textContent=fmt(slice.facturado)+' · '+slice.pct+'%';
+          document.getElementById('tt-color-bar').style.background=slice.col;
+          tt.style.display='block';
+          tt.style.left=(e.clientX+14)+'px';
+          tt.style.top=(e.clientY-10)+'px';
+          canvas.style.cursor='pointer';
+          return;
+        }
+      }
+      tt.style.display='none';
+      canvas.style.cursor='default';
+    };
+    canvas.onmouseleave=function(){ document.getElementById('chart-tooltip').style.display='none'; };
   }
 
   // Leyenda
