@@ -724,7 +724,7 @@ function renderClientes(clientes){
   });
 
   // Torta de participación
-  const TORTA_COLORS=['#4a9eff','#e8a020','#1fc876','#9b6fff','#e84040','#00d4ff','#ff9f43','#ee5a24','#a29bfe','#fd79a8'];
+  const TORTA_COLORS=['#4a9eff','#f0a020','#1fc876','#c44fff','#e84040','#00d4b8','#ff6b35','#a8e063','#ff4da6','#ffd700','#7b68ee','#20c4d4'];
   const top10=sorted.slice(0,10);
   const otrosTotal=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
   const tortaData=otrosTotal>0?[...top10,{nombre:'Otros',facturado:otrosTotal,analista:'',ops:0}]:top10;
@@ -748,8 +748,12 @@ function renderClientes(clientes){
       const col=TORTA_COLORS[i%TORTA_COLORS.length];
       const midA=startAngle+angle/2;
       const lx=cx+(r+8)*Math.cos(midA), ly=cy+(r+8)*Math.sin(midA);
+      const pctLabel=Math.round(pct*100);
       paths+=`<path d="M${xi1},${yi1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${ri},${ri} 0 ${large},0 ${xi1},${yi1} Z"
-        fill="${col}" stroke="var(--bg)" stroke-width="1.5" opacity="0.92"/>`;
+        fill="${col}" stroke="var(--bg)" stroke-width="1.5" opacity="0.92"
+        style="cursor:pointer;transition:opacity .15s"
+        onmouseenter="mostrarTooltip(event,'${c.nombre.replace(/'/g,'\'')}',' ${fmt(c.facturado)} · ${pctLabel}%','${col}')"
+        onmouseleave="ocultarTooltip()"/>`;
       if(pct>0.05){
         paths+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central"
           font-family="DM Mono" font-size="9" fill="var(--text)" font-weight="500">${Math.round(pct*100)}%</text>`;
@@ -974,6 +978,20 @@ function limpiarFiltroFecha(){
   aplicarFiltroFecha();
 }
 
+function mostrarTooltip(e, nombre, valor, color){
+  const tt = document.getElementById('chart-tooltip');
+  document.getElementById('tt-nombre').textContent = nombre;
+  document.getElementById('tt-valor').textContent = valor;
+  document.getElementById('tt-color-bar').style.background = color;
+  tt.style.display = 'block';
+  tt.style.left = (e.clientX + 14) + 'px';
+  tt.style.top  = (e.clientY - 10) + 'px';
+}
+
+function ocultarTooltip(){
+  document.getElementById('chart-tooltip').style.display = 'none';
+}
+
 function showSec(name,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
@@ -997,5 +1015,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
+<div id="chart-tooltip" style="
+  display:none;position:fixed;z-index:999;
+  background:var(--surface);border:1px solid var(--border2);
+  padding:8px 12px;pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  min-width:180px;">
+  <div id="tt-color-bar" style="height:3px;margin-bottom:8px;"></div>
+  <div id="tt-nombre" style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;"></div>
+  <div id="tt-valor" style="font-family:'DM Mono';font-size:11px;color:var(--muted2);"></div>
+</div>
 </body>
 </html>
