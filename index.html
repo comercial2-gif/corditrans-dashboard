@@ -423,13 +423,12 @@ function procesarSeg(filas){
     }));
 }
 
-function procesarCliAnalistas(filas,mesIdx){
+function procesarCliAnalistas(filas,mesNum){
   let f=filas;
-  if(mesIdx>=0){
-    // RESUMEN tiene columna MES con numero (1=enero, 3=marzo, etc)
+  if(mesNum>0){
     f=filas.filter(r=>{
       const mes=parseInt(r["MES"]||r["mes"]||"0");
-      return mes===mesIdx+1;
+      return mes===mesNum;
     });
   }
   // Filtro de rango adicional
@@ -473,7 +472,7 @@ async function cargarSheet(id){
   const now=new Date();
   PROG=now.getDate()/new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   // Inicializar MES_CLI al mes actual si no hay guardado
-  if(!MES_CLI){MES_CLI=MESES[now.getMonth()].toUpperCase();localStorage.setItem(SK_MC,MES_CLI);}
+  if(!MES_CLI){MES_CLI=String(now.getMonth()+1);localStorage.setItem(SK_MC,MES_CLI);}
   poblarSelectores();
   actualizarHeader();
   document.getElementById("banner-demo").style.display="none";
@@ -508,11 +507,11 @@ async function recargar(){
 function poblarSelectores(){
   ["sel-mes-flota","sel-mes-cli","sel-mes-ana"].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
-    el.innerHTML=MESES.map(m=>`<option value="${m.toUpperCase()}">${m}</option>`).join("");
+    el.innerHTML=MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
   });
   const sf=document.getElementById("sel-mes-flota");if(sf)sf.value=MES_FLOTA;
-  const sc=document.getElementById("sel-mes-cli");if(sc)sc.value=MES_CLI||MESES[new Date().getMonth()].toUpperCase();
-  const sa=document.getElementById("sel-mes-ana");if(sa)sa.value=MES_CLI||MESES[new Date().getMonth()].toUpperCase();
+  const sc=document.getElementById("sel-mes-cli");if(sc)sc.value=MES_CLI||String(new Date().getMonth()+1);
+  const sa=document.getElementById("sel-mes-ana");if(sa)sa.value=MES_CLI||String(new Date().getMonth()+1);
   const fn=document.getElementById("flota-hoja-nom");if(fn)fn.textContent=MES_FLOTA;
 }
 
@@ -537,6 +536,7 @@ function cambiarMesAna(mes){
   const sc=document.getElementById("sel-mes-cli");if(sc)sc.value=mes;
   renderCliAnalistas();setTimeout(animateBars,80);
 }
+function cambiarMes(mes){MES_CLI=mes;localStorage.setItem(SK_MC,mes);["sel-mes-cli","sel-mes-ana"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=mes;});renderCliAnalistas();setTimeout(animateBars,80);}
 
 function aplicarFiltro(){renderCliAnalistas();setTimeout(animateBars,80);}
 
@@ -547,8 +547,8 @@ function limpiarFiltro(){
 }
 
 function renderCliAnalistas(){
-  const mesIdx=MES_CLI?MESES.findIndex(m=>m.toUpperCase()===MES_CLI):- 1;
-  const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesIdx):DEMO_CLI;
+  const mesNum=parseInt(MES_CLI)||0;
+  const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
   if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
 }
