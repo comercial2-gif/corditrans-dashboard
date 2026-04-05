@@ -1046,19 +1046,24 @@ function aplicarFiltroMesYFecha(){
   if(!FILAS_TOTAL_ANALISTAS.length) return;
   const {desde,hasta}=getFiltroFechas();
 
-  // Filtrar por mes si está seleccionado
+  // Leer mes directamente del selector activo
+  const selCli=document.getElementById('sel-mes-cli');
+  const selAna=document.getElementById('sel-mes-ana');
+  const mesSeleccionado=(selCli?.value||selAna?.value||MES_CLI||'').toUpperCase();
+  if(mesSeleccionado) MES_CLI=mesSeleccionado;
+
+  // Filtrar por mes
   let filas=FILAS_TOTAL_ANALISTAS;
-  if(MES_CLI){
-    const mesIdx=MESES.findIndex(m=>m.toUpperCase()===MES_CLI.toUpperCase());
-    console.log('Filtrando mes:', MES_CLI, 'índice:', mesIdx);
+  if(mesSeleccionado){
+    const mesIdx=MESES.findIndex(m=>m.toUpperCase()===mesSeleccionado);
+    console.log('Filtrando mes:', mesSeleccionado, 'índice:', mesIdx, 'total filas:', filas.length);
     if(mesIdx>=0){
       filas=filas.filter(r=>{
         const fechaStr=(r['FECHA']||'').trim();
         if(!fechaStr) return false;
-        // Extraer mes directamente del string DD/MM/YYYY
         const partes=fechaStr.split('/');
         if(partes.length>=2){
-          const mesFila=parseInt(partes[1])-1; // 0-based
+          const mesFila=parseInt(partes[1])-1;
           return mesFila===mesIdx;
         }
         const f=parseFecha(fechaStr);
@@ -1140,7 +1145,12 @@ function showSec(name,btn){
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+name).classList.add('active');
   btn.classList.add('active');
-  setTimeout(animateBars,50);
+  // Al entrar a clientes o analistas, aplicar filtro de mes
+  if((name==='clientes'||name==='analistas')&&FILAS_TOTAL_ANALISTAS.length){
+    setTimeout(()=>{aplicarFiltroMesYFecha();setTimeout(animateBars,80);},50);
+  } else {
+    setTimeout(animateBars,50);
+  }
 }
 
 // ─────────────────────────────────────────────
