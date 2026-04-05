@@ -925,19 +925,17 @@ function animateBars(){
 }
 
 function parseFecha(str){
-  // Soporta DD/MM/YYYY y variantes que Google Sheets exporta
   if(!str) return null;
   str = str.trim();
-  // DD/MM/YYYY
-  const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  // DD/MM/YYYY o D/M/YYYY
+  const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if(m1) return new Date(parseInt(m1[3]), parseInt(m1[2])-1, parseInt(m1[1]));
   // YYYY-MM-DD
   const m2 = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m2) return new Date(parseInt(m2[1]), parseInt(m2[2])-1, parseInt(m2[3]));
-  // M/D/YYYY (formato que a veces exporta Sheets)
-  const m3 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if(m3) return new Date(parseInt(m3[3]), parseInt(m3[1])-1, parseInt(m3[2]));
-  return null;
+  // Intentar parseo directo como último recurso
+  const d = new Date(str);
+  return isNaN(d)?null:d;
 }
 
 function getFiltroFechas(){
@@ -1053,7 +1051,8 @@ function aplicarFiltroMesYFecha(){
     if(mesIdx>=0){
       filas=filas.filter(r=>{
         const f=parseFecha(r['FECHA']||'');
-        return f?f.getMonth()===mesIdx:true;
+        if(!f) return false; // si no tiene fecha válida, excluir
+        return f.getMonth()===mesIdx;
       });
     }
   }
