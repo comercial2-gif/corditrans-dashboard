@@ -350,26 +350,32 @@ function bc(p){if(p>=90)return"var(--green)";if(p>=70)return"var(--yellow)";retu
 function pMoney(v){
   if(!v)return 0;
   let s=String(v).trim();
-  // Eliminar simbolo de moneda y espacios
-  s=s.replace(/[$\s]/g,"");
-  // Detectar formato: si tiene punto Y coma, el punto es miles y coma es decimal
-  // Si solo tiene puntos, pueden ser miles (31.500.000) o decimal (31.5)
+  // Eliminar simbolo de moneda, espacios y %
+  s=s.replace(/[$\s%]/g,"");
+  if(!s)return 0;
+  // El CSV de Google Sheets Colombia llega con coma como separador de miles
+  // Ejemplo: 31,500,000 o $300,000
+  // Simplemente eliminar todas las comas (son separadores de miles)
+  // y todos los puntos que sean separadores de miles
   const hasComa=s.includes(",");
-  const puntos=s.split(".").length-1;
-  if(hasComa){
-    // Formato europeo/colombiano: 31.500,50 -> punto=miles, coma=decimal
-    s=s.replace(/\./g,"").replace(",",".");
-  } else if(puntos>1){
-    // Multiples puntos: 31.500.000 -> todos son separadores de miles
-    s=s.replace(/\./g,"");
-  } else if(puntos===1){
-    // Un solo punto: puede ser decimal (31.5) o miles (31.500)
-    const parteDecimal=s.split(".")[1];
-    if(parteDecimal&&parteDecimal.length===3){
-      // Probablemente miles: 31.500 -> 31500
+  const tienePunto=s.includes(".");
+  if(hasComa&&!tienePunto){
+    // Solo comas: 31,500,000 -> separadores de miles
+    s=s.replace(/,/g,"");
+  } else if(hasComa&&tienePunto){
+    // Comas y punto: 31,500.50 -> coma=miles, punto=decimal
+    s=s.replace(/,/g,"");
+  } else if(!hasComa&&tienePunto){
+    // Solo puntos: puede ser 31.500.000 (miles) o 31.5 (decimal)
+    const partes=s.split(".");
+    if(partes.length>2){
+      // Multiples puntos: todos son miles
+      s=s.replace(/\./g,"");
+    } else if(partes[1]&&partes[1].length===3){
+      // Un punto con 3 decimales: es miles (31.500)
       s=s.replace(/\./g,"");
     }
-    // Si no, se deja como decimal: 31.5
+    // Un punto con != 3 decimales: es decimal real (31.5)
   }
   return parseFloat(s)||0;
 }
