@@ -347,7 +347,32 @@ const DEMO_CLI=[
 function fmt(v){if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(1)+"M";if(v>=1e3)return"$"+(v/1e3).toFixed(0)+"K";return"$"+Math.round(v).toLocaleString("es-CO");}
 function sem(p){if(p>=90)return{c:"g",l:"Verde"};if(p>=70)return{c:"y",l:"Amarillo"};return{c:"r",l:"Rojo"};}
 function bc(p){if(p>=90)return"var(--green)";if(p>=70)return"var(--yellow)";return"var(--red)";}
-function pMoney(v){if(!v)return 0;return parseFloat(String(v).replace(/[$. ]/g,"").replace(/,/g,"."))||0;}
+function pMoney(v){
+  if(!v)return 0;
+  let s=String(v).trim();
+  // Eliminar simbolo de moneda y espacios
+  s=s.replace(/[$\s]/g,"");
+  // Detectar formato: si tiene punto Y coma, el punto es miles y coma es decimal
+  // Si solo tiene puntos, pueden ser miles (31.500.000) o decimal (31.5)
+  const hasComa=s.includes(",");
+  const puntos=s.split(".").length-1;
+  if(hasComa){
+    // Formato europeo/colombiano: 31.500,50 -> punto=miles, coma=decimal
+    s=s.replace(/\./g,"").replace(",",".");
+  } else if(puntos>1){
+    // Multiples puntos: 31.500.000 -> todos son separadores de miles
+    s=s.replace(/\./g,"");
+  } else if(puntos===1){
+    // Un solo punto: puede ser decimal (31.5) o miles (31.500)
+    const parteDecimal=s.split(".")[1];
+    if(parteDecimal&&parteDecimal.length===3){
+      // Probablemente miles: 31.500 -> 31500
+      s=s.replace(/\./g,"");
+    }
+    // Si no, se deja como decimal: 31.5
+  }
+  return parseFloat(s)||0;
+}
 function parseFecha(s){
   if(!s)return null;s=s.trim();
   const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
