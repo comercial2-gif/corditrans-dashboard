@@ -399,8 +399,7 @@ async function fetchCSV(id,hoja){
 async function fetchOpc(id,hoja){try{return await fetchCSV(id,hoja);}catch{return[];}}
 
 function parsearCSV(txt){
-  const lines=txt.trim().split("
-");
+  const lines=txt.trim().split("\n");
   if(lines.length<2)return[];
   const headers=lines[0].split(",").map(h=>h.replace(/"/g,"").trim());
   return lines.slice(1).map(l=>{
@@ -413,8 +412,7 @@ function parsearCSV(txt){
 }
 
 function procesarSeg(filas){
-  const colR=filas.length>0?Object.keys(filas[0]).find(k=>k.replace(/
-/g," ").toUpperCase().includes("PRODUCCION")&&k.toUpperCase().includes("REAL")):null;
+  const colR=filas.length>0?Object.keys(filas[0]).find(k=>k.replace(/\n/g," ").toUpperCase().includes("PRODUCCION")&&k.toUpperCase().includes("REAL")):null;
   return filas.filter(r=>{const p=(r["PLACAS"]||"").trim();return p&&p!=="Total"&&p!=="PLACAS"&&/^[A-Z]{2,4}\d{3}/.test(p);})
     .map(r=>({
       p:(r["PLACAS"]||"").trim(),c:r["CONDUCTOR"]||"",
@@ -725,11 +723,20 @@ function showSec(name,btn){
 }
 
 window.addEventListener("DOMContentLoaded",()=>{
-  poblarSelectores();actualizarHeader();
+  // Poblar selectores con los meses
+  ["sel-mes-flota","sel-mes-cli","sel-mes-ana"].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML=MESES.map(m=>`<option value="${m.toUpperCase()}">${m}</option>`).join("");
+  });
+  const sf=document.getElementById("sel-mes-flota");if(sf)sf.value=MES_FLOTA;
+  const sc=document.getElementById("sel-mes-cli");if(sc)sc.value=MES_CLI||MESES[new Date().getMonth()].toUpperCase();
+  const sa=document.getElementById("sel-mes-ana");if(sa)sa.value=MES_CLI||MESES[new Date().getMonth()].toUpperCase();
+  const fn=document.getElementById("flota-hoja-nom");if(fn)fn.textContent=MES_FLOTA;
+  actualizarHeader();
   cargarDemo();
   if(SHEET_ID){
     document.getElementById("sheet-input").value=SHEET_ID;
-    cargarSheet(SHEET_ID).catch(()=>{});
+    cargarSheet(SHEET_ID).catch(e=>console.error(e));
   }
 });
 </script>
