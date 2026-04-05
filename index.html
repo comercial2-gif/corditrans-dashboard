@@ -702,6 +702,7 @@ function renderFlota(seg){
 //  RENDER CLIENTES
 // ─────────────────────────────────────────────
 function renderClientes(clientes){
+  if(!document.getElementById('kpi-clientes')) return;
   if(!clientes||!clientes.length){
     document.getElementById('kpi-clientes').innerHTML='<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Pendiente</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans;line-height:1.4">Agrega la columna TARIFA CLIENTE en tu hoja REGISTRO DE OPERACIONES para activar esta sección.</div></div>';
     document.getElementById('client-tbody').innerHTML='<tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center">Sin datos de TARIFA CLIENTE aún</td></tr>';
@@ -832,6 +833,7 @@ function renderClientes(clientes){
 //  RENDER ANALISTAS
 // ─────────────────────────────────────────────
 function renderAnalistas(clientes,analistas){
+  if(!document.getElementById('kpi-analistas')) return;
   if(!analistas||!analistas.length){
     document.getElementById('kpi-analistas').innerHTML='<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Pendiente</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans">Crea la hoja ANALISTAS con columnas NOMBRE, META, COLOR para activar esta sección.</div></div>';
     document.getElementById('rank-analistas').innerHTML='';
