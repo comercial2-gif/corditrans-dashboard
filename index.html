@@ -541,10 +541,10 @@ async function cargarDesdeSheet(id){
   ANALISTAS_DATA=analistas;
   SEG_DATA=seg;
   poblarSelectores();
-  // Seleccionar mes actual en clientes/analistas
-  const mesActual=new Date().toLocaleString('es',{month:'long'}).charAt(0).toUpperCase()+new Date().toLocaleString('es',{month:'long'}).slice(1);
-  MES_CLI=MES_CLI||mesActual.toUpperCase();
-  ['sel-mes-cli','sel-mes-ana'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=MES_CLI;});
+  // Aplicar filtro de mes guardado inmediatamente
+  ['sel-mes-cli','sel-mes-ana'].forEach(id=>{const el=document.getElementById(id);if(el&&MES_CLI)el.value=MES_CLI;});
+  // Aplicar filtro de mes al cargar
+  aplicarFiltroMesYFecha();
   MODO='live';
   actualizarBanner(id);
   try {
