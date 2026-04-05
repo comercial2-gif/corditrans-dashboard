@@ -447,7 +447,7 @@ function procesarSeg(filas){
   return filas.filter(r=>{const p=(r["PLACAS"]||"").trim();return p&&p!=="Total"&&p!=="PLACAS"&&/^[A-Z]{2,4}\d{3}/.test(p);})
     .map(r=>({
       p:(r["PLACAS"]||"").trim(),c:r["CONDUCTOR"]||"",
-      meta:pMoney(r["META MES"]),oo:parseInt(r["FUERA DE SERVICIO (DIAS)"])||0,
+      meta:pMoney(r["META MES"]),metaDiaria:pMoney(r["META DIARIA"]||r["META_DIARIA"]||"0"),diasLab:parseInt(r["DIAS LAB HASTA HOY"]||r["DIAS LAB HASTA HOY"])||0,oo:parseInt(r["FUERA DE SERVICIO (DIAS)"])||0,
       razon:r["RAZON PARO"]||r["RAZÓN PARO"]||"",analista:r["ANALISTA"]||"Sin asignar",
       real:pMoney(colR?r[colR]:(r["PRODUCCION REAL"]||r["PRODUCCIÓN REAL"]||"0")),
       estado:(r["ESTADO"]||"ACTIVO").trim().toUpperCase(),
@@ -598,11 +598,15 @@ function renderFlota(seg){
   const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
   const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
   const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
+  // Usar dias habiles para calcular avance esperado
+  const diasLab=seg.length>0?seg[0].diasLab:0;
+  const tEsperado=seg.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
+  const progReal=tEsperado>0?tEsperado/tMeta:PROG;
   const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
   const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
   document.getElementById("kpi-flota").innerHTML=`
     <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta mes: ${fmt(tMeta)}</div></div>
-    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tMeta*PROG)}</div></div>
+    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tEsperado)}</div></div>
     <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${seg.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
     <div class="kpi cr"><div class="kpi-label">Carros en Alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">Por debajo del 70%</div></div>
     <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
@@ -634,7 +638,7 @@ function renderFlota(seg){
   const enV=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)>=90).length;
   const enA=act.filter(v=>{const p=v.meta>0?Math.round((v.real/v.meta)*100):0;return p>=70&&p<90;}).length;
   const enR=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
-  const proy=PROG>0?Math.round(tReal/PROG):0;
+  const proy=progReal>0?Math.round(tReal/progReal):0;
   document.getElementById("semaforo-wrap").innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(31,200,118,.06);border:1px solid rgba(31,200,118,.15)"><span style="font-size:11px">🟢 En verde (≥90%)</span><span style="font-family:DM Mono;font-size:13px;color:var(--green)">${enV} vehículos</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(232,160,32,.06);border:1px solid rgba(232,160,32,.15)"><span style="font-size:11px">🟡 Amarillo (70–89%)</span><span style="font-family:DM Mono;font-size:13px;color:var(--yellow)">${enA} vehículos</span></div>
