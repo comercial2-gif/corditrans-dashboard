@@ -1047,13 +1047,23 @@ function aplicarFiltroMesYFecha(){
   // Filtrar por mes si está seleccionado
   let filas=FILAS_TOTAL_ANALISTAS;
   if(MES_CLI){
-    const mesIdx=MESES.findIndex(m=>m.toUpperCase()===MES_CLI);
+    const mesIdx=MESES.findIndex(m=>m.toUpperCase()===MES_CLI.toUpperCase());
+    console.log('Filtrando mes:', MES_CLI, 'índice:', mesIdx);
     if(mesIdx>=0){
       filas=filas.filter(r=>{
-        const f=parseFecha(r['FECHA']||'');
-        if(!f) return false; // si no tiene fecha válida, excluir
+        const fechaStr=(r['FECHA']||'').trim();
+        if(!fechaStr) return false;
+        // Extraer mes directamente del string DD/MM/YYYY
+        const partes=fechaStr.split('/');
+        if(partes.length>=2){
+          const mesFila=parseInt(partes[1])-1; // 0-based
+          return mesFila===mesIdx;
+        }
+        const f=parseFecha(fechaStr);
+        if(!f) return false;
         return f.getMonth()===mesIdx;
       });
+      console.log('Filas después del filtro:', filas.length);
     }
   }
 
