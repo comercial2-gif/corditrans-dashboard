@@ -209,6 +209,11 @@
 <!-- ══ DASHBOARD ══ -->
 <div class="main">
   <div class="section active" id="sec-flota">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Mes de seguimiento</span>
+      <select id="sel-mes-flota" onchange="cambiarMesFlota(this.value)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:6px 12px;font-family:DM Sans;font-size:12px;outline:none;cursor:pointer;min-width:140px;"></select>
+      <span id="flota-mes-label" style="font-size:11px;color:var(--muted2);">Hoja: <span id="flota-mes-nombre" style="color:var(--accent);font-weight:600;"></span></span>
+    </div>
     <div class="kpi-strip" id="kpi-flota"></div>
     <div class="row c64">
       <div class="card">
@@ -256,6 +261,9 @@
 
   <div class="section" id="sec-clientes">
     <div id="filtro-clientes" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Mes</span>
+      <select id="sel-mes-cli" onchange="cambiarMesClientes(this.value)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:DM Sans;font-size:11px;outline:none;cursor:pointer;"></select>
+      <div style="width:1px;height:20px;background:var(--border2);flex-shrink:0;"></div>
       <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Filtrar por fecha</span>
       <input type="date" id="cli-fecha-desde" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
       <span style="font-size:11px;color:var(--muted2)">hasta</span>
@@ -290,6 +298,9 @@
 
   <div class="section" id="sec-analistas">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Mes</span>
+      <select id="sel-mes-ana" onchange="cambiarMesAnalistas(this.value)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:DM Sans;font-size:11px;outline:none;cursor:pointer;"></select>
+      <div style="width:1px;height:20px;background:var(--border2);flex-shrink:0;"></div>
       <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Filtrar por fecha</span>
       <input type="date" id="ana-fecha-desde" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'DM Mono';font-size:11px;outline:none;" onchange="aplicarFiltroFecha()"/>
       <span style="font-size:11px;color:var(--muted2)">hasta</span>
@@ -318,10 +329,16 @@
 //  ESTADO
 // ─────────────────────────────────────────────
 const SK='corditrans_sheet_id';
+const SK_MES='corditrans_mes_flota';
 let SHEET_ID=localStorage.getItem(SK)||'';
-let MODO='demo'; // 'demo' | 'live'
+let MES_FLOTA=localStorage.getItem(SK_MES)||'MARZO';
+let MES_CLI=localStorage.getItem('corditrans_mes_cli')||'';
+let MODO='demo';
 let DIA=24, DIAS=31;
 let PROG=DIA/DIAS;
+let FILAS_TOTAL_ANALISTAS_TODOS=[];
+let SEG_DATA=[];
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 // ─────────────────────────────────────────────
 //  DATOS DEMO (placas y conductores reales)
@@ -478,28 +495,8 @@ async function cargarDesdeSheet(id){
   ]);
 
   // HOJA MARZO — mapeo de columnas reales
-  // Buscar columna PRODUCCION REAL con cualquier variante
-  const colReal = filasSeg.length > 0
-    ? Object.keys(filasSeg[0]).find(k => k.replace(/\n/g,' ').replace(/[ÁÉÍÓÚÜ]/gi, c => ({A:'A',E:'E',I:'I',O:'O',U:'U'})[c.toUpperCase()]||c).toUpperCase().includes('PRODUCCION') && k.toUpperCase().includes('REAL'))
-    : null;
-
-  const seg = filasSeg
-    .filter(r => {
-      const p = (r['PLACAS']||'').trim();
-      return p && p !== 'Total' && p !== 'PLACAS' && /^[A-Z]{2,4}\d{3}/.test(p);
-    })
-    .map(r => ({
-      p:        (r['PLACAS']||'').trim(),
-      c:        r['CONDUCTOR']||'',
-      meta:     pMoney(r['META MES']),
-      oo:       parseInt(r['FUERA DE SERVICIO (DIAS)'])||0,
-      razon:    r['RAZON PARO']||r['RAZÓN PARO']||'',
-      analista: r['ANALISTA']||'Sin asignar',
-      real:     pMoney(colReal ? r[colReal] : (r['PRODUCCION REAL']||r['PRODUCCIÓN REAL']||'0')),
-      estado:   (r['ESTADO']||'ACTIVO').trim().toUpperCase(),
-    }));
-
-  if(!seg.length) throw new Error('La hoja "MARZO" no tiene datos o las columnas no coinciden. Verifica que la fila 1 tenga los encabezados: PLACAS, META MES, CONDUCTOR, FUERA DE SERVICIO (DIAS), PRODUCCION REAL.');
+  const seg=procesarSeg(filasSeg);
+  if(!seg.length) throw new Error('La hoja "'+MES_FLOTA+'" no tiene datos o las columnas no coinciden.');
 
   // TOTAL ANALISTAS → clientes y analistas (venta total propios + terceros)
   // Agrupar por ANALISTA+CLIENTE para soportar clientes con múltiples analistas
@@ -542,6 +539,12 @@ async function cargarDesdeSheet(id){
 
   FILAS_TOTAL_ANALISTAS=filasReg;
   ANALISTAS_DATA=analistas;
+  SEG_DATA=seg;
+  poblarSelectores();
+  // Seleccionar mes actual en clientes/analistas
+  const mesActual=new Date().toLocaleString('es',{month:'long'}).charAt(0).toUpperCase()+new Date().toLocaleString('es',{month:'long'}).slice(1);
+  MES_CLI=MES_CLI||mesActual.toUpperCase();
+  ['sel-mes-cli','sel-mes-ana'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=MES_CLI;});
   MODO='live';
   actualizarBanner(id);
   try {
@@ -962,50 +965,7 @@ function filtrarFilas(filas){
 }
 
 function aplicarFiltroFecha(){
-  if(!FILAS_TOTAL_ANALISTAS.length) return;
-  const {desde, hasta} = getFiltroFechas();
-
-  // Sincronizar ambos filtros
-  const cliDesde = document.getElementById('cli-fecha-desde');
-  const cliHasta = document.getElementById('cli-fecha-hasta');
-  const anaDesde = document.getElementById('ana-fecha-desde');
-  const anaHasta = document.getElementById('ana-fecha-hasta');
-  const secActiva = document.querySelector('.section.active')?.id;
-
-  if(secActiva==='sec-analistas'){
-    if(cliDesde) cliDesde.value = anaDesde?.value||'';
-    if(cliHasta) cliHasta.value = anaHasta?.value||'';
-  } else {
-    if(anaDesde) anaDesde.value = cliDesde?.value||'';
-    if(anaHasta) anaHasta.value = cliHasta?.value||'';
-  }
-
-  // Actualizar label
-  const label = desde||hasta
-    ? `${desde?desde.toLocaleDateString('es-CO'):''} ${hasta?' → '+hasta.toLocaleDateString('es-CO'):''}`
-    : '';
-  ['filtro-label','filtro-label-ana'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=label;
-  });
-
-  // Recalcular clientes y analistas con filas filtradas
-  const filasFiltradas = filtrarFilas(FILAS_TOTAL_ANALISTAS);
-  const opsPorKey2={};
-  filasFiltradas.forEach(r=>{
-    const cliente=(r['CLIENTE']||'').trim();
-    const cobro=pMoney(r['COBRO REMESA']||'0');
-    const analista=(r['ANALISTA']||'').trim();
-    if(!cliente) return;
-    const key=analista+'|||'+cliente;
-    if(!opsPorKey2[key]) opsPorKey2[key]={ops:0,facturado:0,analista,cliente};
-    opsPorKey2[key].ops++;
-    opsPorKey2[key].facturado+=cobro;
-  });
-  const clientes=Object.values(opsPorKey2).map(d=>({nombre:d.cliente,analista:d.analista,ops:d.ops,facturado:d.facturado}));
-  renderClientes(clientes);
-  renderAnalistas(clientes, ANALISTAS_DATA);
-  setTimeout(animateBars,50);
+  aplicarFiltroMesYFecha();
 }
 
 function limpiarFiltroFecha(){
@@ -1018,6 +978,136 @@ function limpiarFiltroFecha(){
     if(el) el.textContent='';
   });
   aplicarFiltroFecha();
+}
+
+// ─────────────────────────────────────────────
+//  GESTIÓN DE MESES
+// ─────────────────────────────────────────────
+function poblarSelectores(){
+  const meses = MESES;
+  ['sel-mes-flota','sel-mes-cli','sel-mes-ana'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML='';
+    meses.forEach(m=>{
+      const opt=document.createElement('option');
+      opt.value=m.toUpperCase();
+      opt.textContent=m;
+      sel.appendChild(opt);
+    });
+    // Seleccionar mes guardado
+    if(id==='sel-mes-flota') sel.value=MES_FLOTA;
+    else sel.value=MES_CLI||new Date().toLocaleString('es',{month:'long'}).toUpperCase();
+  });
+  const nomEl=document.getElementById('flota-mes-nombre');
+  if(nomEl) nomEl.textContent=MES_FLOTA;
+}
+
+async function cambiarMesFlota(mes){
+  MES_FLOTA=mes;
+  localStorage.setItem(SK_MES,mes);
+  const nomEl=document.getElementById('flota-mes-nombre');
+  if(nomEl) nomEl.textContent=mes;
+  if(SHEET_ID&&MODO==='live'){
+    try{
+      const filasSeg=await fetchCSV(SHEET_ID,mes);
+      const seg=procesarSeg(filasSeg);
+      SEG_DATA=seg;
+      renderFlota(seg);
+      setTimeout(animateBars,80);
+    }catch(e){
+      alert('No se pudo cargar la hoja "'+mes+'". Verifica que exista en tu Sheet.');
+    }
+  } else {
+    renderFlota(SEG_DATA);
+    setTimeout(animateBars,80);
+  }
+}
+
+function cambiarMesClientes(mes){
+  MES_CLI=mes;
+  localStorage.setItem('corditrans_mes_cli',mes);
+  // Sincronizar analistas
+  const anaEl=document.getElementById('sel-mes-ana');
+  if(anaEl) anaEl.value=mes;
+  aplicarFiltroMesYFecha();
+}
+
+function cambiarMesAnalistas(mes){
+  MES_CLI=mes;
+  localStorage.setItem('corditrans_mes_cli',mes);
+  // Sincronizar clientes
+  const cliEl=document.getElementById('sel-mes-cli');
+  if(cliEl) cliEl.value=mes;
+  aplicarFiltroMesYFecha();
+}
+
+function aplicarFiltroMesYFecha(){
+  if(!FILAS_TOTAL_ANALISTAS.length) return;
+  const {desde,hasta}=getFiltroFechas();
+
+  // Filtrar por mes si está seleccionado
+  let filas=FILAS_TOTAL_ANALISTAS;
+  if(MES_CLI){
+    const mesIdx=MESES.findIndex(m=>m.toUpperCase()===MES_CLI);
+    if(mesIdx>=0){
+      filas=filas.filter(r=>{
+        const f=parseFecha(r['FECHA']||'');
+        return f?f.getMonth()===mesIdx:true;
+      });
+    }
+  }
+
+  // Filtrar por rango de fecha adicional
+  if(desde||hasta){
+    filas=filas.filter(r=>{
+      const f=parseFecha(r['FECHA']||'');
+      if(!f) return true;
+      if(desde&&f<desde) return false;
+      if(hasta&&f>hasta) return false;
+      return true;
+    });
+  }
+
+  // Actualizar label
+  ['filtro-label','filtro-label-ana'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=desde||hasta?`${desde?desde.toLocaleDateString('es-CO'):''} ${hasta?'→ '+hasta.toLocaleDateString('es-CO'):''}`:''
+  });
+
+  const opsPorKey={};
+  filas.forEach(r=>{
+    const cliente=(r['CLIENTE']||'').trim();
+    const cobro=pMoney(r['COBRO REMESA']||'0');
+    const analista=(r['ANALISTA']||'').trim();
+    if(!cliente) return;
+    const key=analista+'|||'+cliente;
+    if(!opsPorKey[key]) opsPorKey[key]={ops:0,facturado:0,analista,cliente};
+    opsPorKey[key].ops++;
+    opsPorKey[key].facturado+=cobro;
+  });
+  const clientes=Object.values(opsPorKey).map(d=>({nombre:d.cliente,analista:d.analista,ops:d.ops,facturado:d.facturado}));
+  renderClientes(clientes);
+  renderAnalistas(clientes,ANALISTAS_DATA);
+  setTimeout(animateBars,50);
+}
+
+function procesarSeg(filasSeg){
+  const colReal=filasSeg.length>0
+    ?Object.keys(filasSeg[0]).find(k=>k.replace(/\n/g,' ').toUpperCase().includes('PRODUCCION')&&k.toUpperCase().includes('REAL'))
+    :null;
+  return filasSeg
+    .filter(r=>{const p=(r['PLACAS']||'').trim();return p&&p!=='Total'&&p!=='PLACAS'&&/^[A-Z]{2,4}\d{3}/.test(p);})
+    .map(r=>({
+      p:(r['PLACAS']||'').trim(),
+      c:r['CONDUCTOR']||'',
+      meta:pMoney(r['META MES']),
+      oo:parseInt(r['FUERA DE SERVICIO (DIAS)'])||0,
+      razon:r['RAZON PARO']||r['RAZÓN PARO']||'',
+      analista:r['ANALISTA']||'Sin asignar',
+      real:pMoney(colReal?r[colReal]:(r['PRODUCCION REAL']||r['PRODUCCIÓN REAL']||'0')),
+      estado:(r['ESTADO']||'ACTIVO').trim().toUpperCase(),
+    }));
 }
 
 function mostrarTooltip(e, nombre, valor, color){
@@ -1046,6 +1136,7 @@ function showSec(name,btn){
 //  INICIO
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
+  poblarSelectores();
   // Cargar demo por defecto
   renderTodo(DEMO_SEG, DEMO_CLI, DEMO_ANA);
   setTimeout(animateBars,120);
