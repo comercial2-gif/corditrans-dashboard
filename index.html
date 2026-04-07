@@ -477,14 +477,15 @@ function procesarCliAnalistas(filas,mesNum){
   }
   const map={};
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim(),cobro=pMoney(r["COBRO REMESA"]||"0");
+    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
+    const cobro=pMoney(r["COBRO REMESA"]||"0");
+    const ops=parseInt(r["OPS"]||r["ops"]||"0")||1;
     if(!cli)return;
     const key=ana+"|||"+cli;
     if(!map[key])map[key]={cli,ana,ops:0,fac:0};
-    map[key].ops++;map[key].fac+=cobro;
+    map[key].ops+=ops;map[key].fac+=cobro;
   });
-  // RESUMEN no tiene ops individuales, usar facturado como proxy
-  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
+  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops,facturado:d.fac}));
 }
 
 // ── CARGA PRINCIPAL ──
