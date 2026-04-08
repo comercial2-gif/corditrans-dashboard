@@ -268,7 +268,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <input type="date" id="ana-hasta" onchange="aplicarFiltro()"/>
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
   </div>
-  <div class="kpi-strip" id="kpi-analistas"></div>
+  <div id="kpi-analistas" style="margin-bottom:18px;"></div>
   <div class="row c2" style="margin-bottom:12px">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--yellow)"></span>Ranking de Analistas</div></div>
@@ -724,6 +724,7 @@ function kpiStrip(data,titulo,color){
   const cliCount=[...new Set(data.flatMap(a=>a.cli.map(c=>c.nombre)))].length;
   const col=color||"var(--accent)";
   const mejor=(sorted[0]?.nombre||"--").split(" ")[0];
+  const mejorPct=sorted[0]?.p||0;
   const pctColor=prom>=90?"var(--green)":prom>=70?"var(--yellow)":"var(--red)";
   return `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);padding:16px 18px;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
@@ -734,7 +735,7 @@ function kpiStrip(data,titulo,color){
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
       <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
         <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Mejor Analista</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${sorted[0]?.p||0}%</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${mejorPct}%</div>
         <div style="font-size:10px;color:var(--muted2);margin-top:3px">${mejor}</div>
       </div>
       <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
@@ -773,9 +774,15 @@ function renderAnalistas(clientes,analistas){
   const urbanos=data.filter(a=>a.tipo==="URBANOS"||a.tipo==="URBANO");
   const nacional=data.filter(a=>a.tipo==="NACIONAL");
   let html="";
-  if(urbanos.length) html+=kpiStrip(urbanos,"Urbanos","var(--blue)");
-  if(nacional.length) html+=kpiStrip(nacional,"Nacional","var(--accent)");
-  if(!urbanos.length&&!nacional.length) html+=kpiStrip(data,"Todos los Analistas","var(--purple)");
+  if(urbanos.length&&nacional.length){
+    html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${kpiStrip(urbanos,"Urbanos","var(--blue)")}${kpiStrip(nacional,"Nacional","var(--accent)")}</div>`;
+  } else if(urbanos.length){
+    html=kpiStrip(urbanos,"Urbanos","var(--blue)");
+  } else if(nacional.length){
+    html=kpiStrip(nacional,"Nacional","var(--accent)");
+  } else {
+    html=kpiStrip(data,"Todos los Analistas","var(--purple)");
+  }
   el.innerHTML=html;
   const rl=document.getElementById("rank-analistas");rl.innerHTML="";
   const sorted=[...data].sort((a,b)=>b.p-a.p);
