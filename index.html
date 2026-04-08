@@ -778,6 +778,7 @@ function renderAnalistas(clientes,analistas){
   if(!urbanos.length&&!nacional.length) html+=kpiStrip(data,"Todos los Analistas","var(--purple)");
   el.innerHTML=html;
   const rl=document.getElementById("rank-analistas");rl.innerHTML="";
+  const sorted=[...data].sort((a,b)=>b.p-a.p);
   sorted.forEach((a,i)=>{const bw=Math.min(a.p,100);
     rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1"><div class="rank-name">${a.nombre}</div><div class="rank-sub">${a.cli.length} clientes</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(a.p)};width:0%"></div></div><div class="rank-val" style="color:${bc(a.p)}">${a.p}% · ${fmt(a.tR)}</div></div>`;
   });
