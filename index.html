@@ -717,20 +717,48 @@ function renderClientes(clientes){
 }
 
 // ── RENDER ANALISTAS ──
-function kpiStrip(data,titulo){
+function kpiStrip(data,titulo,color){
   const sorted=[...data].sort((a,b)=>b.p-a.p);
   const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
   const enV=data.filter(a=>a.p>=90).length,enR=data.filter(a=>a.p<70).length;
   const cliCount=[...new Set(data.flatMap(a=>a.cli.map(c=>c.nombre)))].length;
-  return `<div style="margin-bottom:16px">
-    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${titulo}</div>
-    <div class="kpi-strip">
-      <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div class="kpi-val">${sorted[0]?.p||0}%</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
-      <div class="kpi cb"><div class="kpi-label">Promedio Equipo</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">Vs meta individual</div></div>
-      <div class="kpi cy"><div class="kpi-label">En Verde</div><div class="kpi-val">${enV}/${data.length}</div><div class="kpi-sub">≥ 90% de meta</div></div>
-      <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val">${enR}</div><div class="kpi-sub">Por debajo del 70%</div></div>
-      <div class="kpi cp"><div class="kpi-label">Clientes Gestionados</div><div class="kpi-val">${cliCount}</div><div class="kpi-sub">Entre ${data.length} analistas</div></div>
-    </div></div>`;
+  const col=color||"var(--accent)";
+  const mejor=(sorted[0]?.nombre||"--").split(" ")[0];
+  const pctColor=prom>=90?"var(--green)":prom>=70?"var(--yellow)":"var(--red)";
+  return `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);padding:16px 18px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <div style="width:3px;height:16px;background:${col};flex-shrink:0"></div>
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text);font-weight:600">${titulo}</span>
+      <span style="font-size:10px;color:var(--muted2)">(${data.length} analistas)</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Mejor Analista</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${sorted[0]?.p||0}%</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:3px">${mejor}</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Promedio Equipo</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:${pctColor};line-height:1">${prom}%</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:3px">Vs meta</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">En Verde</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${enV}/${data.length}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:3px">&ge; 90% meta</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">En Rojo</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--red);line-height:1">${enR}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:3px">&lt; 70% meta</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Clientes</div>
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--blue);line-height:1">${cliCount}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:3px">Gestionados</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderAnalistas(clientes,analistas){
@@ -745,9 +773,9 @@ function renderAnalistas(clientes,analistas){
   const urbanos=data.filter(a=>a.tipo==="URBANOS"||a.tipo==="URBANO");
   const nacional=data.filter(a=>a.tipo==="NACIONAL");
   let html="";
-  if(urbanos.length) html+=kpiStrip(urbanos,"Urbanos");
-  if(nacional.length) html+=kpiStrip(nacional,"Nacional");
-  if(!urbanos.length&&!nacional.length) html+=kpiStrip(data,"Todos los Analistas");
+  if(urbanos.length) html+=kpiStrip(urbanos,"Urbanos","var(--blue)");
+  if(nacional.length) html+=kpiStrip(nacional,"Nacional","var(--accent)");
+  if(!urbanos.length&&!nacional.length) html+=kpiStrip(data,"Todos los Analistas","var(--purple)");
   el.innerHTML=html;
   const rl=document.getElementById("rank-analistas");rl.innerHTML="";
   sorted.forEach((a,i)=>{const bw=Math.min(a.p,100);
