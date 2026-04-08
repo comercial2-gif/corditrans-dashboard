@@ -784,7 +784,7 @@ function renderAnalistas(clientes,analistas){
     html=kpiStrip(data,"Todos los Analistas","var(--purple)");
   }
   el.innerHTML=html;
-  const rl=docgetElementById("rank-analistas");if(rl)rl.innerHTML=""; // Ranking eliminado
+  const rl=document.getElementById("rank-analistas");if(rl)rl.innerHTML=""; // Ranking eliminado
   // Funcion para renderizar barras de un grupo
   function renderBars(elId, grupo){
     const el=document.getElementById(elId);if(!el)return;
