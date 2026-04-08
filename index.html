@@ -498,7 +498,7 @@ async function cargarSheet(id){
   SEG_DATA=procesarSeg(filasSeg);
   ALL_FILAS=filasTA;
   ANALISTAS_DATA=filasAna.length
-    ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
+    ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
   MODO="live";
   const now=new Date();
@@ -717,6 +717,22 @@ function renderClientes(clientes){
 }
 
 // ── RENDER ANALISTAS ──
+function kpiStrip(data,titulo){
+  const sorted=[...data].sort((a,b)=>b.p-a.p);
+  const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
+  const enV=data.filter(a=>a.p>=90).length,enR=data.filter(a=>a.p<70).length;
+  const cliCount=[...new Set(data.flatMap(a=>a.cli.map(c=>c.nombre)))].length;
+  return `<div style="margin-bottom:16px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${titulo}</div>
+    <div class="kpi-strip">
+      <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div class="kpi-val">${sorted[0]?.p||0}%</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
+      <div class="kpi cb"><div class="kpi-label">Promedio Equipo</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">Vs meta individual</div></div>
+      <div class="kpi cy"><div class="kpi-label">En Verde</div><div class="kpi-val">${enV}/${data.length}</div><div class="kpi-sub">≥ 90% de meta</div></div>
+      <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val">${enR}</div><div class="kpi-sub">Por debajo del 70%</div></div>
+      <div class="kpi cp"><div class="kpi-label">Clientes Gestionados</div><div class="kpi-val">${cliCount}</div><div class="kpi-sub">Entre ${data.length} analistas</div></div>
+    </div></div>`;
+}
+
 function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
   if(!analistas||!analistas.length){el.innerHTML="";return;}
@@ -725,15 +741,14 @@ function renderAnalistas(clientes,analistas){
     const tR=cli.reduce((s,c)=>s+c.facturado,0),p=a.meta>0?Math.round((tR/a.meta)*100):0;
     return{...a,tR,p,cli};
   });
-  const sorted=[...data].sort((a,b)=>b.p-a.p),mx=sorted[0]?.p||1;
-  const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
-  const enV=data.filter(a=>a.p>=90).length,enR=data.filter(a=>a.p<70).length;
-  el.innerHTML=`
-    <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div class="kpi-val">${sorted[0]?.p||0}%</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
-    <div class="kpi cb"><div class="kpi-label">Promedio Equipo</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">Vs meta individual</div></div>
-    <div class="kpi cy"><div class="kpi-label">En Verde</div><div class="kpi-val">${enV}/${data.length}</div><div class="kpi-sub">≥ 90% de meta</div></div>
-    <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val">${enR}</div><div class="kpi-sub">Por debajo del 70%</div></div>
-    <div class="kpi cp"><div class="kpi-label">Clientes Gestionados</div><div class="kpi-val">${(clientes||[]).length}</div><div class="kpi-sub">Entre ${data.length} analistas</div></div>`;
+  // Separar por tipo de operacion
+  const urbanos=data.filter(a=>a.tipo==="URBANOS"||a.tipo==="URBANO");
+  const nacional=data.filter(a=>a.tipo==="NACIONAL");
+  let html="";
+  if(urbanos.length) html+=kpiStrip(urbanos,"Urbanos");
+  if(nacional.length) html+=kpiStrip(nacional,"Nacional");
+  if(!urbanos.length&&!nacional.length) html+=kpiStrip(data,"Todos los Analistas");
+  el.innerHTML=html;
   const rl=document.getElementById("rank-analistas");rl.innerHTML="";
   sorted.forEach((a,i)=>{const bw=Math.min(a.p,100);
     rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1"><div class="rank-name">${a.nombre}</div><div class="rank-sub">${a.cli.length} clientes</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(a.p)};width:0%"></div></div><div class="rank-val" style="color:${bc(a.p)}">${a.p}% · ${fmt(a.tR)}</div></div>`;
