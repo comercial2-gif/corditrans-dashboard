@@ -269,14 +269,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
   </div>
   <div id="kpi-analistas" style="margin-bottom:18px;"></div>
-  <div class="row c2" style="margin-bottom:12px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
     <div class="card">
-      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--yellow)"></span>Ranking de Analistas</div></div>
-      <div class="rank-list" id="rank-analistas"></div>
+      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Urbanos — Meta vs Real</div></div>
+      <div id="analyst-bars-urbanos" style="display:flex;flex-direction:column;gap:14px;padding-top:4px;"></div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Meta vs Real por Analista</div></div>
-      <div id="analyst-bars" style="display:flex;flex-direction:column;gap:14px;padding-top:4px;"></div>
+      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Nacional — Meta vs Real</div></div>
+      <div id="analyst-bars-nacional" style="display:flex;flex-direction:column;gap:14px;padding-top:4px;"></div>
     </div>
   </div>
   <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted2);margin-bottom:10px;">Detalle por Analista</div>
@@ -784,14 +784,21 @@ function renderAnalistas(clientes,analistas){
     html=kpiStrip(data,"Todos los Analistas","var(--purple)");
   }
   el.innerHTML=html;
-  const rl=document.getElementById("rank-analistas");rl.innerHTML="";
-  const sorted=[...data].sort((a,b)=>b.p-a.p);
-  sorted.forEach((a,i)=>{const bw=Math.min(a.p,100);
-    rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1"><div class="rank-name">${a.nombre}</div><div class="rank-sub">${a.cli.length} clientes</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(a.p)};width:0%"></div></div><div class="rank-val" style="color:${bc(a.p)}">${a.p}% · ${fmt(a.tR)}</div></div>`;
-  });
-  const bars=document.getElementById("analyst-bars");bars.innerHTML="";
-  data.forEach(a=>{bars.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px">${a.nombre}</span><span style="font-family:DM Mono;font-size:11px;color:${bc(a.p)}">${a.p}%</span></div><div style="position:relative;height:5px;background:var(--border)"><div class="bar-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%;height:100%"></div><div style="position:absolute;top:-4px;left:${Math.round(PROG*100)}%;width:1.5px;height:13px;background:rgba(255,255,255,.2)"></div></div><div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9.5px;color:var(--muted)"><span>${fmt(a.tR)} real</span><span>${a.meta>0?fmt(a.meta)+" meta":"Sin meta"}</span></div></div>`;});
-  const grid=document.getElementById("analyst-grid");grid.innerHTML="";
+  const rl=docgetElementById("rank-analistas");if(rl)rl.innerHTML=""; // Ranking eliminado
+  // Funcion para renderizar barras de un grupo
+  function renderBars(elId, grupo){
+    const el=document.getElementById(elId);if(!el)return;
+    const sorted=[...grupo].sort((a,b)=>b.tR-a.tR);
+    el.innerHTML="";
+    sorted.forEach(a=>{
+      el.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px">${a.nombre}</span><span style="font-family:DM Mono;font-size:11px;color:${bc(a.p)}">${a.p}%</span></div><div style="position:relative;height:5px;background:var(--border)"><div class="bar-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%;height:100%"></div><div style="position:absolute;top:-4px;left:${Math.round(PROG*100)}%;width:1.5px;height:13px;background:rgba(255,255,255,.2)"></div></div><div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9.5px;color:var(--muted)"><span>${fmt(a.tR)} real</span><span>${a.meta>0?fmt(a.meta)+" meta":"Sin meta"}</span></div></div>`;
+    });
+  }
+  renderBars("analyst-bars-urbanos", urbanos);
+  renderBars("analyst-bars-nacional", nacional);
+  // Mantener compatibilidad con analyst-bars si existe
+  const barsLegacy=document.getElementById("analyst-bars");if(barsLegacy)barsLegacy.innerHTML="";
+const grid=document.getElementById("analyst-grid");grid.innerHTML="";
   data.forEach(a=>{
     const rows=a.cli.map(c=>`<tr><td style="color:var(--text);padding-right:8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td class="r" style="color:var(--muted2)">${c.ops} ops</td><td class="r">${fmt(c.facturado)}</td></tr>`).join("");
     grid.innerHTML+=`<div class="acard"><div class="ahdr"><div class="avtr" style="background:${a.color}">${a.nombre[0]}</div><div><div class="aname">${a.nombre}</div><div class="acli">${a.cli.length} clientes · ${a.cli.reduce((s,c)=>s+c.ops,0)} ops</div></div><span class="chip ${sem(a.p).c}" style="margin-left:auto">${a.p}%</span></div><div class="akpis"><div class="ak"><div class="ak-val" style="color:${bc(a.p)}">${fmt(a.tR)}</div><div class="ak-lbl">Real</div></div><div class="ak"><div class="ak-val">${a.meta>0?fmt(a.meta):"—"}</div><div class="ak-lbl">Meta</div></div><div class="ak"><div class="ak-val tm">${a.meta>0?fmt(a.meta*PROG):"—"}</div><div class="ak-lbl">Esperado</div></div></div><div class="prog-lbl"><span>Avance</span><span style="color:${bc(a.p)}">${a.p}%</span></div><div class="prog-bg"><div class="prog-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%"></div></div><table class="cmini"><tr style="border-top:none"><td colspan="3" style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding-top:8px;border-top:none">Clientes</td></tr>${rows||"<tr><td colspan=\"3\" style=\"color:var(--muted)\">Sin clientes</td></tr>"}</table></div>`;
