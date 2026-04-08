@@ -668,10 +668,13 @@ function renderClientes(clientes){
   }
   const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
   const tF=clientes.reduce((s,c)=>s+c.facturado,0),tO=clientes.reduce((s,c)=>s+c.ops,0),mx=sorted[0]?.facturado||1;
+  // Calcular meta total sumando metas de todos los analistas
+  const metaTotal=ANALISTAS_DATA.reduce((s,a)=>s+a.meta,0);
+  const pctMeta=metaTotal>0?Math.round((tF/metaTotal)*100):0;
   el.innerHTML=`
     <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
     <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${clientes.length}</div><div class="kpi-sub">Con operación</div></div>
-    <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(sorted[0]?.facturado||0)}</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
+    <div class="kpi cy"><div class="kpi-label">Cumplimiento Meta</div><div class="kpi-val" style="color:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--yellow)':'var(--red)'}">${pctMeta}%</div><div class="kpi-sub">Meta equipo: ${fmt(metaTotal)}</div></div>
     <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
     <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>`;
   const tb=document.getElementById("client-tbody");tb.innerHTML="";
