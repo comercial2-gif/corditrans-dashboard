@@ -177,7 +177,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <select id="sel-mes-flota" onchange="cambiarMesFlota(this.value)"></select>
     <span id="flota-hoja-lbl" style="font-size:11px;color:var(--muted2)">Hoja: <b id="flota-hoja-nom" style="color:var(--accent)">—</b></span>
   </div>
-  <div class="kpi-strip" id="kpi-flota"></div>
+  <div id="kpi-flota-wrap" style="margin-bottom:18px;">
+    <!-- Bloque Urbanos -->
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--blue);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block;flex-shrink:0;"></span>
+      Operación Urbana
+      <span style="flex:1;height:1px;background:rgba(74,158,255,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-urbanos" style="margin-bottom:14px;"></div>
+    <!-- Bloque Nacional -->
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>
+      Operación Nacional
+      <span style="flex:1;height:1px;background:rgba(232,160,32,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-nacional"></div>
+  </div>
   <div class="row c64">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Vehículos — Meta vs Real</div></div>
@@ -324,11 +339,11 @@ const DEMO_SEG=[
   {p:"SNY134",c:"JOSE POCATERRA",meta:30500000,oo:0,razon:"",analista:"Rosa Ricardo",real:24772791,estado:"ACTIVO"},
 ];
 const DEMO_ANA=[
-  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876"},
-  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff"},
-  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020"},
-  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff"},
-  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040"},
+  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876",tipo:"URBANOS"},
+  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff",tipo:"URBANOS"},
+  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020",tipo:"URBANOS"},
+  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff",tipo:"URBANOS"},
+  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040",tipo:"NACIONAL"},
 ];
 const DEMO_CLI=[
   {nombre:"GESTION CARGO ZONA FRANCA S.A.S",analista:"Sandra Ballesteros",ops:259,facturado:117000000},
@@ -594,23 +609,46 @@ function actualizarHeader(){
   document.getElementById("bdia").textContent="Día "+now.getDate()+" de "+dias;
 }
 
+// ── HELPERS KPI FLOTA ──
+function buildKpiFlota(grupo, colorAcc){
+  const act=grupo.filter(v=>v.estado!=="PARO"), oos=grupo.filter(v=>v.estado==="PARO");
+  const tMeta=grupo.reduce((s,v)=>s+v.meta,0), tReal=grupo.reduce((s,v)=>s+v.real,0);
+  const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
+  const diasLab=grupo.length>0?grupo[0].diasLab:0;
+  const tEsperado=grupo.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
+  const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
+  const pctOp=grupo.length>0?Math.round((act.length/grupo.length)*100):0;
+  return `
+    <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta mes: ${fmt(tMeta)}</div></div>
+    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tEsperado)}</div></div>
+    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${grupo.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
+    <div class="kpi cr"><div class="kpi-label">Carros en Alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">Por debajo del 70%</div></div>
+    <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
+}
+
 // ── RENDER FLOTA ──
 function renderFlota(seg){
+  // Separar vehículos por tipo de operación usando ANALISTAS_DATA
+  const tipoMap={};
+  (ANALISTAS_DATA||[]).forEach(a=>{
+    const t=(a.tipo||"").toUpperCase();
+    tipoMap[a.nombre.toUpperCase()]=t;
+  });
+  const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
+  const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
+  // Si no hay separación clara, mostrar todo en ambos como fallback
+  const elUrb=document.getElementById("kpi-flota-urbanos");
+  const elNac=document.getElementById("kpi-flota-nacional");
+  if(elUrb) elUrb.innerHTML=segUrb.length>0?buildKpiFlota(segUrb,"blue"):buildKpiFlota(seg,"blue");
+  if(elNac) elNac.innerHTML=segNac.length>0?buildKpiFlota(segNac,"accent"):"<div style='font-size:12px;color:var(--muted);padding:10px 0'>Sin vehículos nacionales registrados</div>";
+
+  // Totales para el resto del render (tabla, donut, ranking, semáforo)
   const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
   const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
-  const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
-  // Usar dias habiles para calcular avance esperado
   const diasLab=seg.length>0?seg[0].diasLab:0;
   const tEsperado=seg.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
   const progReal=tEsperado>0?tEsperado/tMeta:PROG;
-  const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
   const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
-  document.getElementById("kpi-flota").innerHTML=`
-    <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta mes: ${fmt(tMeta)}</div></div>
-    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tEsperado)}</div></div>
-    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${seg.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
-    <div class="kpi cr"><div class="kpi-label">Carros en Alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">Por debajo del 70%</div></div>
-    <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
   const sorted=[...seg].sort((a,b)=>(b.meta>0?b.real/b.meta:0)-(a.meta>0?a.real/a.meta:0));
   const tb=document.getElementById("fleet-tbody");tb.innerHTML="";
   sorted.forEach(v=>{
