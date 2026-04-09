@@ -819,13 +819,21 @@ function renderClientes(clientes){
       </div>
     </div>`;
 
-  // Tabla y torta unificadas
-  const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
+  // Tabla unificada — agrupar por nombre de cliente sumando ops y facturación
+  const mapaUnif={};
+  clientes.forEach(c=>{
+    const key=c.nombre.trim();
+    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,analistas:new Set()};
+    mapaUnif[key].ops+=c.ops;
+    mapaUnif[key].facturado+=c.facturado;
+    if(c.analista) mapaUnif[key].analistas.add(c.analista.split(' ')[0]);
+  });
+  const sorted=Object.values(mapaUnif).sort((a,b)=>b.facturado-a.facturado);
   const mx=sorted[0]?.facturado||1;
   const tb=document.getElementById('client-tbody');if(tb){tb.innerHTML='';
     sorted.forEach(c=>{
       const pct=Math.round((c.facturado/mx)*100);
-      tb.innerHTML+=`<tr><td style="font-size:13px;font-weight:600;color:#fff;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${(c.analista||'--').split(' ')[0]}</td><td style="font-family:'DM Mono';font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+      tb.innerHTML+=`<tr><td style="font-size:13px;font-weight:600;color:#fff;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(' / ')}</td><td style="font-family:'DM Mono';font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
     });
   }
 
