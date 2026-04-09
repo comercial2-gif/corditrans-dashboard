@@ -843,6 +843,30 @@ function renderClientes(clientes){
   }).join('');
 }
 
+function kpiStrip(grupo, titulo, color){
+  if(!grupo||!grupo.length) return "";
+  const sorted=[...grupo].sort((a,b)=>b.p-a.p);
+  const mejor=sorted[0];
+  const promedio=grupo.length>0?Math.round(grupo.reduce((s,a)=>s+a.p,0)/grupo.length):0;
+  const enVerde=grupo.filter(a=>a.p>=90).length;
+  const enRojo=grupo.filter(a=>a.p<70).length;
+  const totalCli=grupo.reduce((s,a)=>s+(a.cli?a.cli.length:0),0);
+  const totalFac=grupo.reduce((s,a)=>s+a.tR,0);
+  const totalMeta=grupo.reduce((s,a)=>s+a.meta,0);
+  return `<div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+      <div class="kpi cg" style="padding:10px 12px;"><div class="kpi-label">Mejor Analista</div><div style="font-family:'DM Sans';font-size:13px;font-weight:600;line-height:1.2;margin-top:4px;">${mejor?mejor.nombre:"—"}</div><div class="kpi-sub">${mejor?mejor.p+"%":""}</div></div>
+      <div class="kpi cy" style="padding:10px 12px;"><div class="kpi-label">Promedio</div><div class="kpi-val">${promedio}%</div><div class="kpi-sub">${grupo.length} analistas</div></div>
+      <div class="kpi cb" style="padding:10px 12px;"><div class="kpi-label">Facturación</div><div class="kpi-val">${fmt(totalFac)}</div><div class="kpi-sub">Meta: ${fmt(totalMeta)}</div></div>
+      <div class="kpi cg" style="padding:10px 12px;"><div class="kpi-label">En Verde</div><div class="kpi-val tg">${enVerde}</div><div class="kpi-sub">≥ 90%</div></div>
+      <div class="kpi cr" style="padding:10px 12px;"><div class="kpi-label">En Rojo</div><div class="kpi-val tr">${enRojo}</div><div class="kpi-sub">< 70%</div></div>
+    </div>
+  </div>`;
+}
+
 function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
   if(!analistas||!analistas.length){el.innerHTML="";return;}
