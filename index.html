@@ -659,39 +659,121 @@ function renderFlota(seg){
 }
 
 // ── RENDER CLIENTES ──
-function renderClientes(clientes){
-  const el=document.getElementById("kpi-clientes");if(!el)return;
-  if(!clientes||!clientes.length){
-    el.innerHTML=`<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Sin datos</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans">No hay operaciones registradas para este mes en TOTAL ANALISTAS.</div></div>`;
-    document.getElementById("client-tbody").innerHTML=`<tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center">Sin datos para el mes seleccionado</td></tr>`;
-    const tc=document.getElementById("torta-canvas");if(tc){const ctx=tc.getContext("2d");ctx.clearRect(0,0,200,200);}
-    document.getElementById("torta-legend").innerHTML="";
-    document.getElementById("tc-val").textContent="$0";document.getElementById("tc-lbl").textContent="Sin datos";
-    return;
-  }
+function renderTortaGrupo(canvasId, legendId, valId, clientes){
   const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
-  const tF=clientes.reduce((s,c)=>s+c.facturado,0),tO=clientes.reduce((s,c)=>s+c.ops,0),mx=sorted[0]?.facturado||1;
-  // Calcular meta total sumando metas de todos los analistas
-  const metaTotal=ANALISTAS_DATA.reduce((s,a)=>s+a.meta,0);
-  const pctMeta=metaTotal>0?Math.round((tF/metaTotal)*100):0;
-  el.innerHTML=`
-    <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
-    <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${clientes.length}</div><div class="kpi-sub">Con operación</div></div>
-    <div class="kpi cy"><div class="kpi-label">Cumplimiento Meta</div><div class="kpi-val" style="color:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--yellow)':'var(--red)'}">${pctMeta}%</div><div class="kpi-sub">Meta equipo: ${fmt(metaTotal)}</div></div>
-    <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
-    <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>`;
-  const tb=document.getElementById("client-tbody");tb.innerHTML="";
-  sorted.forEach(c=>{
-    const pct=Math.round((c.facturado/mx)*100);
-    tb.innerHTML+=`<tr><td style="font-size:13px;font-weight:600;color:#ffffff;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${(c.analista||"—").split(" ")[0]}</td><td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
-  });
-  // Torta
-  const top=sorted.slice(0,10),otros=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
+  const top=sorted.slice(0,10), otros=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
   const td=otros>0?[...top,{nombre:"Otros",facturado:otros}]:top;
   const totT=td.reduce((s,c)=>s+c.facturado,0)||1;
-  const canvas=document.getElementById("torta-canvas");
+  const canvas=document.getElementById(canvasId);
+  const valEl=document.getElementById(valId);
+  if(valEl) valEl.textContent=fmt(totT);
+  if(!canvas) return;
+  const sz=canvas.width, cx=sz/2, cy=sz/2, r=sz/2-8, ri=sz/2-28;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,sz,sz);
+  let sa=-Math.PI/2; const slices=[];
+  td.forEach((c,i)=>{
+    const pct=c.facturado/totT, angle=pct*2*Math.PI, ea=sa+angle, col=TC[i%TC.length];
+    const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea);
+    const xi1=cx+ri*Math.cos(sa),yi1=cy+ri*Math.sin(sa),xi2=cx+ri*Math.cos(ea),yi2=cy+ri*Math.sin(ea);
+    ctx.beginPath();ctx.moveTo(xi1,yi1);ctx.lineTo(x1,y1);ctx.arc(cx,cy,r,sa,ea);ctx.lineTo(xi2,yi2);ctx.arc(cx,cy,ri,ea,sa,true);ctx.closePath();
+    ctx.fillStyle=col;ctx.fill();ctx.strokeStyle="#0b0d12";ctx.lineWidth=1.5;ctx.stroke();
+    slices.push({sa,ea,col,nombre:c.nombre,facturado:c.facturado,pct:Math.round(pct*100)});
+    sa=ea;
+  });
+  canvas.onmousemove=function(e){
+    const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left-cx,my=e.clientY-rect.top-cy,dist=Math.sqrt(mx*mx+my*my);
+    const tt=document.getElementById('chart-tooltip');
+    if(dist>=ri&&dist<=r){
+      let ang=Math.atan2(my,mx);if(ang<-Math.PI/2)ang+=2*Math.PI;
+      const base=-Math.PI/2,norm=((ang-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+      const sl=slices.find(s=>{const sa=((s.sa-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),ea=((s.ea-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);return ea>sa?norm>=sa&&norm<=ea:norm>=sa||norm<=ea;});
+      if(sl){document.getElementById('tt-nom').textContent=sl.nombre;document.getElementById('tt-val').textContent=fmt(sl.facturado)+' · '+sl.pct+'%';document.getElementById('tt-bar').style.background=sl.col;tt.style.display='block';tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-10)+'px';return;}
+    }
+    tt.style.display='none';
+  };
+  canvas.onmouseleave=()=>document.getElementById('chart-tooltip').style.display='none';
+  const legEl=document.getElementById(legendId);
+  if(legEl) legEl.innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
+    return `<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:'DM Mono';font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:'DM Mono';font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
+  }).join('');
+}
+
+function renderTablaClientes(tbodyId, clientes){
+  const tb=document.getElementById(tbodyId);if(!tb)return;
+  const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
+  const mx=sorted[0]?.facturado||1;
+  tb.innerHTML='';
+  sorted.forEach(c=>{
+    const pct=Math.round((c.facturado/mx)*100);
+    tb.innerHTML+=`<tr><td style="font-size:13px;font-weight:600;color:#ffffff;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${(c.analista||'--').split(' ')[0]}</td><td style="font-family:'DM Mono';font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+  });
+}
+
+function renderClientes(clientes){
+  const el=document.getElementById('kpi-clientes');if(!el)return;
+  if(!clientes||!clientes.length){
+    el.innerHTML=`<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Sin datos</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans">No hay operaciones registradas para este mes.</div></div>`;
+    ['client-tbody-urb','client-tbody-nac'].forEach(id=>{const tb=document.getElementById(id);if(tb)tb.innerHTML='';});
+    return;
+  }
+
+  // Obtener tipo de cada analista
+  const tipoAna={};
+  ANALISTAS_DATA.forEach(a=>{ tipoAna[a.nombre]=(a.tipo||'').toUpperCase(); });
+
+  // Separar clientes por tipo
+  const urbanos=clientes.filter(c=>tipoAna[c.analista]==='URBANOS'||tipoAna[c.analista]==='URBANO');
+  const nacional=clientes.filter(c=>tipoAna[c.analista]==='NACIONAL');
+
+  const tF=clientes.reduce((s,c)=>s+c.facturado,0);
+  const tO=clientes.reduce((s,c)=>s+c.ops,0);
+  const tFurb=urbanos.reduce((s,c)=>s+c.facturado,0);
+  const tFnac=nacional.reduce((s,c)=>s+c.facturado,0);
+  const metaUrb=ANALISTAS_DATA.filter(a=>a.tipo?.toUpperCase()==='URBANOS'||a.tipo?.toUpperCase()==='URBANO').reduce((s,a)=>s+a.meta,0);
+  const metaNac=ANALISTAS_DATA.filter(a=>a.tipo?.toUpperCase()==='NACIONAL').reduce((s,a)=>s+a.meta,0);
+  const metaTotal=ANALISTAS_DATA.reduce((s,a)=>s+a.meta,0);
+  const pctUrb=metaUrb>0?Math.round((tFurb/metaUrb)*100):0;
+  const pctNac=metaNac>0?Math.round((tFnac/metaNac)*100):0;
+  const pctMeta=metaTotal>0?Math.round((tF/metaTotal)*100):0;
+
+  el.innerHTML=`
+    <div style="grid-column:span 5;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--blue);padding:14px 16px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);margin-bottom:10px;font-weight:600">● Urbanos</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Facturado</div><div style="font-family:'Bebas Neue';font-size:24px;color:#fff;line-height:1">${fmt(tFurb)}</div></div>
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Meta</div><div style="font-family:'Bebas Neue';font-size:24px;color:var(--muted2);line-height:1">${fmt(metaUrb)}</div></div>
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Cumplimiento</div><div style="font-family:'Bebas Neue';font-size:24px;color:${pctUrb>=90?'var(--green)':pctUrb>=70?'var(--yellow)':'var(--red)'};line-height:1">${pctUrb}%</div></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);padding:14px 16px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px;font-weight:600">● Nacional</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Facturado</div><div style="font-family:'Bebas Neue';font-size:24px;color:#fff;line-height:1">${fmt(tFnac)}</div></div>
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Meta</div><div style="font-family:'Bebas Neue';font-size:24px;color:var(--muted2);line-height:1">${fmt(metaNac)}</div></div>
+          <div><div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Cumplimiento</div><div style="font-family:'Bebas Neue';font-size:24px;color:${pctNac>=90?'var(--green)':pctNac>=70?'var(--yellow)':'var(--red)'};line-height:1">${pctNac}%</div></div>
+        </div>
+      </div>
+    </div>`;
+
+  // Tabla y torta unificadas
+  const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
+  const mx=sorted[0]?.facturado||1;
+  const tb=document.getElementById('client-tbody');if(tb){tb.innerHTML='';
+    sorted.forEach(c=>{
+      const pct=Math.round((c.facturado/mx)*100);
+      tb.innerHTML+=`<tr><td style="font-size:13px;font-weight:600;color:#fff;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${(c.analista||'--').split(' ')[0]}</td><td style="font-family:'DM Mono';font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+    });
+  }
+
+  // Torta
+  const top=sorted.slice(0,10),otros2=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
+  const td=otros2>0?[...top,{nombre:"Otros",facturado:otros2}]:top;
+  const totT=td.reduce((s,c)=>s+c.facturado,0)||1;
+  const canvas=document.getElementById('torta-canvas');
   if(canvas){
-    const ctx=canvas.getContext("2d"),cx=100,cy=100,r=85,ri=48;
+    const ctx=canvas.getContext('2d'),cx=100,cy=100,r=85,ri=48;
     ctx.clearRect(0,0,200,200);
     let sa=-Math.PI/2;const slices=[];
     td.forEach((c,i)=>{
@@ -703,69 +785,24 @@ function renderClientes(clientes){
       slices.push({sa,ea,col,nombre:c.nombre,facturado:c.facturado,pct:Math.round(pct*100)});
       sa=ea;
     });
-    document.getElementById("tc-val").textContent=fmt(totT);document.getElementById("tc-lbl").textContent="Total facturado";
+    document.getElementById('tc-val').textContent=fmt(totT);
+    document.getElementById('tc-lbl').textContent='Total facturado';
     canvas.onmousemove=function(e){
       const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left-cx,my=e.clientY-rect.top-cy,dist=Math.sqrt(mx*mx+my*my);
-      const tt=document.getElementById("chart-tooltip");
+      const tt=document.getElementById('chart-tooltip');
       if(dist>=ri&&dist<=r){
         let ang=Math.atan2(my,mx);if(ang<-Math.PI/2)ang+=2*Math.PI;
         const base=-Math.PI/2,norm=((ang-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
         const sl=slices.find(s=>{const sa=((s.sa-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),ea=((s.ea-base)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);return ea>sa?norm>=sa&&norm<=ea:norm>=sa||norm<=ea;});
-        if(sl){document.getElementById("tt-nom").textContent=sl.nombre;document.getElementById("tt-val").textContent=fmt(sl.facturado)+" · "+sl.pct+"%";document.getElementById("tt-bar").style.background=sl.col;tt.style.display="block";tt.style.left=(e.clientX+14)+"px";tt.style.top=(e.clientY-10)+"px";return;}
+        if(sl){document.getElementById('tt-nom').textContent=sl.nombre;document.getElementById('tt-val').textContent=fmt(sl.facturado)+' · '+sl.pct+'%';document.getElementById('tt-bar').style.background=sl.col;tt.style.display='block';tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-10)+'px';return;}
       }
-      tt.style.display="none";
+      tt.style.display='none';
     };
-    canvas.onmouseleave=()=>document.getElementById("chart-tooltip").style.display="none";
+    canvas.onmouseleave=()=>document.getElementById('chart-tooltip').style.display='none';
   }
-  document.getElementById("torta-legend").innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
-    return`<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:DM Mono;font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:DM Mono;font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
-  }).join("");
-}
-
-// ── RENDER ANALISTAS ──
-function kpiStrip(data,titulo,color){
-  const sorted=[...data].sort((a,b)=>b.p-a.p);
-  const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
-  const enV=data.filter(a=>a.p>=90).length,enR=data.filter(a=>a.p<70).length;
-  const cliCount=[...new Set(data.flatMap(a=>a.cli.map(c=>c.nombre)))].length;
-  const col=color||"var(--accent)";
-  const mejor=(sorted[0]?.nombre||"--").split(" ")[0];
-  const mejorPct=sorted[0]?.p||0;
-  const pctColor=prom>=90?"var(--green)":prom>=70?"var(--yellow)":"var(--red)";
-  return `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);padding:16px 18px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-      <div style="width:3px;height:16px;background:${col};flex-shrink:0"></div>
-      <span style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text);font-weight:600">${titulo}</span>
-      <span style="font-size:10px;color:var(--muted2)">(${data.length} analistas)</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
-        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Mejor Analista</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${mejorPct}%</div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px">${mejor}</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
-        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Promedio Equipo</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:${pctColor};line-height:1">${prom}%</div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px">Vs meta</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
-        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">En Verde</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--green);line-height:1">${enV}/${data.length}</div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px">&ge; 90% meta</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
-        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">En Rojo</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--red);line-height:1">${enR}</div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px">&lt; 70% meta</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--surface2);border:1px solid var(--border)">
-        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:5px">Clientes</div>
-        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--blue);line-height:1">${cliCount}</div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px">Gestionados</div>
-      </div>
-    </div>
-  </div>`;
+  document.getElementById('torta-legend').innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
+    return `<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:'DM Mono';font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:'DM Mono';font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
+  }).join('');
 }
 
 function renderAnalistas(clientes,analistas){
