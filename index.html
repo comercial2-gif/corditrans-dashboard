@@ -269,6 +269,30 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       </div>
     </div>
   </div>
+
+  <!-- TOP 10 CLIENTES — URBANO vs NACIONAL -->
+  <div class="card" style="margin-top:10px;">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="dot-t" style="background:var(--green)"></span>
+        Top 10 Clientes — Facturación Urbano vs Nacional
+      </div>
+    </div>
+    <table class="ftbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th class="r" style="color:var(--blue)">🔵 Urbano</th>
+          <th class="r" style="color:var(--accent)">🟡 Nacional</th>
+          <th class="r">Total</th>
+          <th class="bar-td">Distribución</th>
+        </tr>
+      </thead>
+      <tbody id="top10-urb-nac"></tbody>
+    </table>
+  </div>
+
 </div>
 
 <!-- ANALISTAS -->
@@ -841,6 +865,45 @@ function renderClientes(clientes){
   document.getElementById('torta-legend').innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
     return `<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:'DM Mono';font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:'DM Mono';font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
   }).join('');
+
+  // ── TOP 10 CLIENTES URBANO vs NACIONAL ──
+  const top10El=document.getElementById('top10-urb-nac');
+  if(top10El){
+    const tipoAna2={};
+    ANALISTAS_DATA.forEach(a=>{ tipoAna2[a.nombre]=(a.tipo||'').toUpperCase(); });
+    const mapClientes={};
+    clientes.forEach(c=>{
+      const tipo=tipoAna2[c.analista]||'';
+      if(!mapClientes[c.nombre]) mapClientes[c.nombre]={nombre:c.nombre,urb:0,nac:0,total:0};
+      if(tipo==='URBANOS'||tipo==='URBANO') mapClientes[c.nombre].urb+=c.facturado;
+      else if(tipo==='NACIONAL') mapClientes[c.nombre].nac+=c.facturado;
+      else mapClientes[c.nombre].urb+=c.facturado;
+      mapClientes[c.nombre].total+=c.facturado;
+    });
+    const top10=Object.values(mapClientes).sort((a,b)=>b.total-a.total).slice(0,10);
+    const maxT=top10[0]?.total||1;
+    top10El.innerHTML=top10.map((c,i)=>{
+      const wUrb=c.total>0?Math.round((c.urb/c.total)*100):0;
+      const wNac=100-wUrb;
+      return `<tr>
+        <td style="font-family:'DM Mono';font-size:11px;color:var(--muted2);width:20px">${i+1}</td>
+        <td style="font-size:13px;font-weight:600;color:#fff;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
+        <td class="num" style="color:var(--blue)">${c.urb>0?fmt(c.urb):'—'}</td>
+        <td class="num" style="color:var(--accent)">${c.nac>0?fmt(c.nac):'—'}</td>
+        <td class="num">${fmt(c.total)}</td>
+        <td class="bar-td">
+          <div style="height:5px;background:var(--border2);display:flex;">
+            ${c.urb>0?`<div style="width:${wUrb}%;background:var(--blue);height:100%"></div>`:''}
+            ${c.nac>0?`<div style="width:${wNac}%;background:var(--accent);height:100%"></div>`:''}
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px">
+            <span style="font-size:8px;color:var(--blue)">${c.urb>0?wUrb+'% urb':''}</span>
+            <span style="font-size:8px;color:var(--accent)">${c.nac>0?wNac+'% nac':''}</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
 }
 
 function kpiStrip(grupo, titulo, color){
