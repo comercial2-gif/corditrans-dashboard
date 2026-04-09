@@ -181,7 +181,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="row c64">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Vehículos — Meta vs Real</div></div>
-      <table class="ftbl"><thead><tr><th>Placa</th><th>Conductor</th><th>Estado</th><th class="bar-td">Avance</th><th class="r">Real</th><th class="r">Meta</th><th class="r">%</th></tr></thead>
+      <table class="ftbl"><thead><tr><th>Placa</th><th>Conductor</th><th>Estado</th><th class="bar-td">Avance</th><th class="r">Real</th><th class="r">Meta</th><th class="r">% Meta</th><th class="r">% Fecha</th></tr></thead>
       <tbody id="fleet-tbody"></tbody></table>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
@@ -615,11 +615,14 @@ function renderFlota(seg){
   const tb=document.getElementById("fleet-tbody");tb.innerHTML="";
   sorted.forEach(v=>{
     const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.min(p,100),s=sem(p);
+    const esperadoHoy=v.metaDiaria>0?v.metaDiaria*v.diasLab:v.meta*PROG;
+    const pf=esperadoHoy>0?Math.round((v.real/esperadoHoy)*100):0;
     tb.innerHTML+=`<tr><td class="plate">${v.p}</td><td style="font-size:12px;color:var(--text);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
       <td>${v.estado==="PARO"?`<span class="chip r">${v.oo>0?v.oo+"d ":""}Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
       <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
       <td class="num">${fmt(v.real)}</td><td class="num">${fmt(v.meta)}</td>
-      <td class="pct-td" style="color:${bc(p)}">${p}%</td></tr>`;
+      <td class="pct-td" style="color:${bc(p)}">${p}%</td>
+      <td class="pct-td" style="color:${bc(pf)}">${pf}%</td></tr>`;
   });
   const ol=document.getElementById("oos-list");
   ol.innerHTML=oos.length?"":'<div style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">Sin vehículos fuera de servicio ✓</div>';
