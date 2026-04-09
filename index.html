@@ -961,13 +961,47 @@ function renderAnalistas(clientes,analistas){
   }
   el.innerHTML=html;
   const rl=document.getElementById("rank-analistas");if(rl)rl.innerHTML=""; // Ranking eliminado
+  // Días hábiles transcurridos (desde la hoja de flota)
+  const diasLabHoy=SEG_DATA.length>0?SEG_DATA[0].diasLab:0;
+
   // Funcion para renderizar barras de un grupo
   function renderBars(elId, grupo){
     const el=document.getElementById(elId);if(!el)return;
     const sorted=[...grupo].sort((a,b)=>b.tR-a.tR);
     el.innerHTML="";
     sorted.forEach(a=>{
-      el.innerHTML+=`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center"><span style="font-size:14px;font-weight:600;color:var(--text)">${a.nombre}</span><span style="font-family:'DM Mono';font-size:14px;font-weight:700;color:${bc(a.p)}">${a.p}%</span></div><div style="position:relative;height:6px;background:var(--border)"><div class="bar-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%;height:100%"></div><div style="position:absolute;top:-4px;left:${Math.round(PROG*100)}%;width:1.5px;height:14px;background:rgba(255,255,255,.3)"></div></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:#ffffff">${fmt(a.tR)} <span style="font-size:10px;font-weight:400;color:var(--muted2)">real</span></span><span style="font-family:'DM Mono';font-size:13px;font-weight:500;color:#ffffff">${a.meta>0?fmt(a.meta)+" <span style=\"font-size:10px;font-weight:400;color:var(--muted2)\">meta</span>":"Sin meta"}</span></div></div>`;
+      // % cumplido vs meta total
+      const pMeta=a.meta>0?Math.round((a.tR/a.meta)*100):0;
+      // Días hábiles totales del mes: meta / metaDiaria (si hay metaDiaria), si no usamos PROG
+      const metaDiariaAna=a.meta>0&&diasLabHoy>0?a.meta*PROG/diasLabHoy:0;
+      const esperadoHoy=metaDiariaAna>0?metaDiariaAna*diasLabHoy:a.meta*PROG;
+      // % vs lo esperado según días hábiles transcurridos
+      const pEsp=esperadoHoy>0?Math.round((a.tR/esperadoHoy)*100):0;
+      const colMeta=bc(pMeta);
+      const colEsp=bc(pEsp);
+      // Marcador de avance esperado en la barra
+      const marcador=Math.round(PROG*100);
+      el.innerHTML+=`<div style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;align-items:center">
+          <span style="font-size:14px;font-weight:600;color:var(--text)">${a.nombre}</span>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2)">vs meta</span>
+            <span style="font-family:'DM Mono';font-size:14px;font-weight:700;color:${colMeta}">${pMeta}%</span>
+            <span style="color:var(--border2);font-size:12px">|</span>
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2)">vs esperado</span>
+            <span style="font-family:'DM Mono';font-size:14px;font-weight:700;color:${colEsp}">${pEsp}%</span>
+          </div>
+        </div>
+        <div style="position:relative;height:6px;background:var(--border)">
+          <div class="bar-fg" data-w="${Math.min(pMeta,100)}" style="background:${colMeta};width:0%;height:100%"></div>
+          <div style="position:absolute;top:-4px;left:${marcador}%;width:1.5px;height:14px;background:rgba(255,255,255,.35)" title="Esperado hoy"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;flex-wrap:wrap;gap:4px">
+          <span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:#fff">${fmt(a.tR)} <span style="font-size:10px;font-weight:400;color:var(--muted2)">real</span></span>
+          <span style="font-family:'DM Mono';font-size:12px;color:var(--muted2)">Esp. hoy: <span style="color:${colEsp};font-weight:600">${fmt(esperadoHoy)}</span></span>
+          <span style="font-family:'DM Mono';font-size:13px;font-weight:500;color:var(--muted2)">${a.meta>0?fmt(a.meta)+' <span style="font-size:10px">meta</span>':"Sin meta"}</span>
+        </div>
+      </div>`;
     });
   }
   renderBars("analyst-bars-urbanos", urbanos);
