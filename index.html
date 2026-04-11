@@ -247,6 +247,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <input type="date" id="cli-hasta" onchange="aplicarFiltro()"/>
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
     <span id="filtro-lbl" style="font-size:11px;color:var(--accent);"></span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted2);">
+      <span style="opacity:.5">🕐</span> Últ. actualización: <span id="ultima-act-cli" style="font-family:'DM Mono';color:var(--muted2);">—</span>
+    </span>
   </div>
   <div class="kpi-strip" id="kpi-clientes"></div>
   <div class="row c53">
@@ -306,6 +309,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <label>hasta</label>
     <input type="date" id="ana-hasta" onchange="aplicarFiltro()"/>
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted2);">
+      <span style="opacity:.5">🕐</span> Últ. actualización: <span id="ultima-act-ana" style="font-family:'DM Mono';color:var(--muted2);">—</span>
+    </span>
   </div>
   <div id="kpi-analistas" style="margin-bottom:18px;"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
@@ -552,6 +558,7 @@ async function cargarSheet(id){
   document.getElementById("btn-act").style.display="inline-block";
   renderFlota(SEG_DATA);
   renderCliAnalistas();
+  actualizarUltimaAct();
   setTimeout(animateBars,120);
 }
 
@@ -564,6 +571,7 @@ function cargarDemo(){
   renderFlota(SEG_DATA);
   renderClientes(DEMO_CLI);
   renderAnalistas(DEMO_CLI,DEMO_ANA);
+  actualizarUltimaAct();
   setTimeout(animateBars,120);
 }
 
@@ -610,7 +618,7 @@ function cambiarMesAna(mes){
 }
 function cambiarMes(mes){MES_CLI=mes;localStorage.setItem(SK_MC,mes);["sel-mes-cli","sel-mes-ana"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=mes;});renderCliAnalistas();setTimeout(animateBars,80);}
 
-function aplicarFiltro(){renderCliAnalistas();setTimeout(animateBars,80);}
+function aplicarFiltro(){renderCliAnalistas();actualizarUltimaAct();setTimeout(animateBars,80);}
 
 function limpiarFiltro(){
   ["cli-desde","cli-hasta","ana-desde","ana-hasta"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
@@ -623,6 +631,16 @@ function renderCliAnalistas(){
   const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
   if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
+}
+
+function actualizarUltimaAct(){
+  const now=new Date();
+  const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const txt=`${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]} · ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  ['ultima-act-cli','ultima-act-ana'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent=txt;
+  });
 }
 
 function actualizarHeader(){
