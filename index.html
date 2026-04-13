@@ -1005,9 +1005,13 @@ function renderAnalistas(clientes,analistas){
       const colEsp=bc(pEsp);
       // Marcador de avance esperado en la barra
       const marcador=Math.round(PROG*100);
+      const totalOps=a.cli?a.cli.reduce((s,c)=>s+c.ops,0):0;
       el.innerHTML+=`<div style="margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center">
-          <span style="font-size:14px;font-weight:600;color:var(--text)">${a.nombre}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:14px;font-weight:600;color:var(--text)">${a.nombre}</span>
+            <span style="font-family:'DM Mono';font-size:11px;font-weight:500;color:var(--muted2);background:var(--surface2);border:1px solid var(--border2);padding:2px 8px;">${totalOps} ops</span>
+          </div>
           <div style="display:flex;gap:18px;align-items:flex-start">
             <div style="text-align:right">
               <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:1px">${esMesActual?'Esperado hoy':'Cierre esperado'}</div>
