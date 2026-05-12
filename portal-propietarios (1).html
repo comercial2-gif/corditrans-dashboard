@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Propietarios — Corditrans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #ddd9d2;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9e9b95;
+    --accent: #c25b2a;
+    --accent-light: #fdf0ea;
+    --accent-text: #8c3a14;
+    --success: #2d6a4f;
+    --success-bg: #eaf3ee;
+    --warning: #8a5c00;
+    --warning-bg: #fdf6e3;
+    --danger: #8c1f1f;
+    --danger-bg: #fdf0f0;
+    --blue: #1a4f8a;
+    --blue-bg: #eaf0f8;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--text);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-mark svg { width: 16px; height: 16px; fill: white; }
+  .logo-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .header-tag {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* LOGIN SCREEN */
+  #login-screen {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 420px;
+  }
+  .login-title {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .login-sub {
+    font-size: 14px;
+    color: var(--text2);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .field-input {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .field-input:focus { border-color: var(--accent); background: white; }
+  .btn-login {
+    margin-top: 1.25rem;
+    width: 100%;
+    height: 44px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-login:hover { background: #a8481e; }
+  .btn-login:active { transform: scale(0.98); }
+  .login-error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--danger-bg);
+    border: 1px solid #f5b8b8;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--danger);
+    display: none;
+  }
+  .login-info {
+    margin-top: 1.5rem;
+    padding: 12px 14px;
+    background: var(--blue-bg);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--blue);
+    line-height: 1.6;
+  }
+
+  /* PORTAL SCREEN */
+  #portal-screen { display: none; }
+
+  .portal-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .prop-id {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .prop-avatar {
+    width: 32px; height: 32px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-text);
+  }
+  .prop-name {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .prop-nit {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+  .btn-salir {
+    font-size: 13px;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 5px 12px;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .btn-salir:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5b8b8; }
+
+  .portal-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 2rem;
+  }
+
+  /* KPI SUMMARY */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+  }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .kpi-value.money {
+    font-family: 'DM Mono', monospace;
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .kpi-card.accent { border-left: 3px solid var(--accent); }
+  .kpi-card.success { border-left: 3px solid var(--success); }
+  .kpi-card.warning { border-left: 3px solid #e6a817; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .filter-row {
+    display: flex;
+    gap: 8px;
+  }
+  .filter-btn {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-align: left;
+    white-space: nowrap;
+  }
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .td-mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .td-money {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning); }
+  .badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+  .badge-info    { background: var(--blue-bg);     color: var(--blue); }
+  .badge-neutral { background: var(--surface2);    color: var(--text2); }
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .badge-success .badge-dot { background: var(--success); }
+  .badge-warning .badge-dot { background: #c78a00; }
+  .badge-danger  .badge-dot { background: var(--danger); }
+  .badge-info    .badge-dot { background: var(--blue); }
+  .badge-neutral .badge-dot { background: var(--text3); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text3);
+  }
+  .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state-text { font-size: 14px; }
+
+  /* LOADING */
+  .loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text3);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* FOOTER */
+  .portal-footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* CONFIG BANNER (solo para admin) */
+  .config-banner {
+    background: var(--warning-bg);
+    border: 1px solid #e6d58a;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    font-size: 13px;
+    color: var(--warning);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .portal-content { padding: 1rem; }
+    th.hide-mobile, td.hide-mobile { display: none; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .header { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16"><path d="M2 4h5v8H2V4zm7 0h5v4h-5V4zm0 6h5v2h-5v-2z"/></svg>
+    </div>
+    <span class="logo-text">Corditrans</span>
+  </div>
+  <span class="header-tag">Portal Propietarios</span>
+</header>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1 class="login-title">Consulta de viajes</h1>
+    <p class="login-sub">Ingresa tu cédula o NIT para ver el estado de tus viajes y pagos.</p>
+
+    <label class="field-label" for="nit-input">Cédula / NIT</label>
+    <input
+      class="field-input"
+      type="text"
+      id="nit-input"
+      placeholder="Ej: 1234567890"
+      autocomplete="off"
+      inputmode="numeric"
+    />
+
+    <div class="login-error" id="login-error">
+      No encontramos un propietario con ese número. Verifica e intenta de nuevo.
+    </div>
+
+    <button class="btn-login" onclick="handleLogin()">Consultar mis viajes →</button>
+
+    <div class="login-info">
+      ℹ️ Si tienes problemas para ingresar, contacta a tu analista o escríbenos al número de operaciones.
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL -->
+<div id="portal-screen">
+  <div class="portal-bar">
+    <div class="prop-id">
+      <div class="prop-avatar" id="prop-avatar">--</div>
+      <div>
+        <div class="prop-name" id="prop-name">--</div>
+        <div class="prop-nit" id="prop-nit-display">--</div>
+      </div>
+    </div>
+    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+  </div>
+
+  <div class="portal-content">
+
+    <div class="config-banner" id="config-banner" style="display:none">
+      ⚠️ <strong>Modo demo:</strong> Conecta tu Google Sheet real en la sección de configuración del código.
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card accent">
+        <div class="kpi-label">Total viajes</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valor total fletes</div>
+        <div class="kpi-value money" id="kpi-valor">—</div>
+      </div>
+      <div class="kpi-card success">
+        <div class="kpi-label">Anticipos pagados</div>
+        <div class="kpi-value money" id="kpi-anticipos">—</div>
+      </div>
+      <div class="kpi-card warning">
+        <div class="kpi-label">Saldos pendientes</div>
+        <div class="kpi-value money" id="kpi-saldos">—</div>
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="section-header">
+      <span class="section-title">Relación de viajes</span>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
+        <button class="filter-btn" onclick="filtrar('pendiente', this)">Saldo pendiente</button>
+        <button class="filter-btn" onclick="filtrar('pagado', this)">Pagados</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading-state" id="loading-state">
+        <div class="spinner"></div>
+        Cargando tus viajes...
+      </div>
+      <table id="viajes-table" style="display:none">
+        <thead>
+          <tr>
+            <th>Manifiesto</th>
+            <th>Fecha viaje</th>
+            <th class="hide-mobile">Placa</th>
+            <th>Valor flete</th>
+            <th class="hide-mobile">N° anticipo</th>
+            <th>Valor anticipo</th>
+            <th class="hide-mobile">F. pago anticipo</th>
+            <th>Saldo</th>
+            <th>Estado</th>
+            <th class="hide-mobile">F. est. saldo</th>
+          </tr>
+        </thead>
+        <tbody id="viajes-body"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-text">No hay viajes con ese filtro.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="portal-footer">
+    Corditrans · Portal de propietarios · Información actualizada desde el sistema de operaciones
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+const SHEET_ID  = '1gmfT4q48p0jHLE77DOPsRphdYlRNYatCS0TFl9rJrGg';
+const API_KEY   = 'AIzaSyBvWqkE62ex-jlsVE-aN7zQITMwDMewEQ0';
+
+// Pestañas del Sheet
+const HOJA_PROPIETARIOS = 'PROPIETARIOS';
+const HOJA_VIAJES       = 'VIAJES TERCEROS';
+
+// Hoja PROPIETARIOS: A=CONDUCTOR, B=CEDULA
+// Hoja VIAJES TERCEROS:
+//   A=PROPIETARIO, B=ID PROPIETARIO, C=FECHA VIAJE, D=PLACA,
+//   E=MANIFIESTO,  F=VALOR MANIFIESTO, G=ANTICIPO (num),
+//   H=VALOR ANTICIPO, I=FECHA PAGO ANTICIPO,
+//   J=FECHA SALDO, K=VALOR SALDO
+// ============================================================
+
+const DEMO_MODE = (API_KEY === 'TU_API_KEY_AQUI');
+
+// Datos de demostración (basados en propietarios reales del Sheet)
+const DEMO_PROPIETARIOS = [
+  { nit: '901198513', nombre: 'LOGISTICA INTEGRAL' },
+  { nit: '73092921',  nombre: 'RAFAEL AYALA' },
+  { nit: '72183602',  nombre: 'JUAN REDONDO' },
+];
+
+const DEMO_VIAJES = [
+  { nit: '901198513', manifiesto: '79302', fecha: '2/5/2026',  placa: 'TRH712', flete: 600000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 600000 },
+  { nit: '901198513', manifiesto: '79306', fecha: '2/5/2026',  placa: 'TRH712', flete: 600000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 600000 },
+  { nit: '901198513', manifiesto: '79637', fecha: '4/5/2026',  placa: 'TRH712', flete: 700000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 700000 },
+  { nit: '901198513', manifiesto: '79616', fecha: '7/5/2026',  placa: 'SSZ955', flete: 750000, numAnticipo: '46120', anticipo: 525000, fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 225000 },
+  { nit: '73092921',  manifiesto: '79496', fecha: '2/5/2026',  placa: 'UFK501', flete: 200000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 200000 },
+  { nit: '73092921',  manifiesto: '79325', fecha: '2/5/2026',  placa: 'MULA',   flete: 350000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 350000 },
+  { nit: '73092921',  manifiesto: '79208', fecha: '2/5/2026',  placa: 'UVU582', flete: 648000, numAnticipo: '',      anticipo: 0,      fechaAnticipo: '', estadoSaldo: 'PENDIENTE', fechaEstSaldo: '', valorSaldo: 648000 },
+  { nit: '72183602',  manifiesto: '79411', fecha: '3/5/2026',  placa: 'CAM305', flete: 480000, numAnticipo: '45900', anticipo: 336000, fechaAnticipo: '4/5/2026', estadoSaldo: 'PAGADO', fechaEstSaldo: '18/5/2026', valorSaldo: 0 },
+];
+
+let viajesActuales = [];
+let propietarioActual = null;
+
+function calcEstado(anticipo, valorSaldo, fechaSaldo) {
+  const val = fmt(valorSaldo);
+  if (val === 0) return 'PAGADO';
+  // Si tiene fecha de saldo estimada y ya pasó → vencido
+  if (fechaSaldo) {
+    const partes = fechaSaldo.split('/');
+    if (partes.length === 3) {
+      const fechaEst = new Date(partes[2], partes[1]-1, partes[0]);
+      if (fechaEst < new Date()) return 'VENCIDO';
+    }
+  }
+  return 'PENDIENTE';
+}
+
+function fmt(val) {
+  if (!val) return 0;
+  return parseInt(String(val).replace(/[^\d]/g, '')) || 0;
+}
+
+function fmtMoneda(val) {
+  return '$ ' + fmt(val).toLocaleString('es-CO');
+}
+
+function fmtFecha(str) {
+  if (!str) return '—';
+  try {
+    const [y, m, d] = str.split('-');
+    return `${d}/${m}/${y}`;
+  } catch { return str; }
+}
+
+function badgeSaldo(estado) {
+  const map = {
+    'PAGADO':    ['badge-success', 'Pagado'],
+    'PENDIENTE': ['badge-warning', 'Pendiente'],
+    'VENCIDO':   ['badge-danger',  'Vencido'],
+  };
+  const [cls, label] = map[estado] || ['badge-neutral', estado || '—'];
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${label}</span>`;
+}
+
+async function fetchSheet(range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Error consultando Google Sheet');
+  const data = await res.json();
+  return data.values || [];
+}
+
+async function handleLogin() {
+  const nit = document.getElementById('nit-input').value.trim().replace(/\s/g, '');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (!nit) { errEl.textContent = 'Ingresa tu cédula o NIT.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.querySelector('.btn-login');
+  btn.textContent = 'Consultando...';
+  btn.disabled = true;
+
+  try {
+    let propietario = null;
+    let viajes = [];
+
+    if (DEMO_MODE) {
+      document.getElementById('config-banner').style.display = 'flex';
+      await new Promise(r => setTimeout(r, 800));
+      propietario = DEMO_PROPIETARIOS.find(p => p.nit === nit);
+      if (propietario) viajes = DEMO_VIAJES.filter(v => v.nit === nit);
+    } else {
+      // Buscar en PROPIETARIOS: A=CONDUCTOR, B=CEDULA
+      const propRows  = await fetchSheet(`${HOJA_PROPIETARIOS}!A2:B`);
+      // Buscar en VIAJES TERCEROS: A=PROPIETARIO, B=ID PROPIETARIO, C=FECHA VIAJE,
+      // D=PLACA, E=MANIFIESTO, F=VALOR MANIFIESTO, G=ANTICIPO (num),
+      // H=VALOR ANTICIPO, I=FECHA PAGO ANTICIPO, J=FECHA SALDO, K=VALOR SALDO
+      const viajeRows = await fetchSheet(`'${HOJA_VIAJES}'!A2:K`);
+
+      // Login por CEDULA (col B), nombre es col A
+      const matchProp = propRows.find(r => r[1]?.trim() === nit);
+      if (matchProp) {
+        propietario = { nit: matchProp[1], nombre: matchProp[0] };
+        // Filtrar viajes por ID PROPIETARIO (col B = r[1])
+        viajes = viajeRows
+          .filter(r => r[1]?.trim() === nit)
+          .map(r => ({
+            nit:           r[1]  || '',
+            manifiesto:    r[4]  || '',
+            fecha:         r[2]  || '',
+            placa:         r[3]  || '',
+            flete:         r[5]  || 0,
+            numAnticipo:   r[6]  || '',
+            anticipo:      r[7]  || 0,
+            fechaAnticipo: r[8]  || '',
+            fechaEstSaldo: r[9]  || '',
+            valorSaldo:    r[10] || 0,
+            // Estado: si VALOR SALDO > 0 y sin fecha pago → pendiente; si = 0 → pagado
+            estadoSaldo: calcEstado(r[7], r[10], r[9]),
+          }));
+      }
+    }
+
+    if (!propietario) {
+      errEl.textContent = 'No encontramos un propietario con ese número. Verifica e intenta de nuevo.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    propietarioActual = propietario;
+    viajesActuales = viajes;
+    mostrarPortal();
+
+  } catch (e) {
+    errEl.textContent = 'Error al consultar la información. Intenta de nuevo en un momento.';
+    errEl.style.display = 'block';
+    console.error(e);
+  } finally {
+    btn.textContent = 'Consultar mis viajes →';
+    btn.disabled = false;
+  }
+}
+
+function mostrarPortal() {
+  const p = propietarioActual;
+  const iniciales = p.nombre.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+
+  document.getElementById('prop-avatar').textContent = iniciales;
+  document.getElementById('prop-name').textContent = p.nombre;
+  document.getElementById('prop-nit-display').textContent = 'NIT/CC: ' + p.nit;
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal-screen').style.display = 'block';
+
+  calcularKPIs();
+  renderTabla('todos');
+}
+
+function calcularKPIs() {
+  const v = viajesActuales;
+  const totalFlete    = v.reduce((s, x) => s + fmt(x.flete), 0);
+  const totalAnticipo = v.reduce((s, x) => s + fmt(x.anticipo), 0);
+  const totalSaldo    = v.reduce((s, x) => s + fmt(x.valorSaldo), 0);
+
+  document.getElementById('kpi-total').textContent    = v.length;
+  document.getElementById('kpi-valor').textContent    = fmtMoneda(totalFlete);
+  document.getElementById('kpi-anticipos').textContent = fmtMoneda(totalAnticipo);
+  document.getElementById('kpi-saldos').textContent   = fmtMoneda(totalSaldo);
+}
+
+function filtrar(estado, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabla(estado);
+}
+
+function renderTabla(filtro) {
+  let datos = viajesActuales;
+  if (filtro === 'pendiente') datos = datos.filter(v => v.estadoSaldo !== 'PAGADO');
+  if (filtro === 'pagado')    datos = datos.filter(v => v.estadoSaldo === 'PAGADO');
+
+  const tbody = document.getElementById('viajes-body');
+  const table = document.getElementById('viajes-table');
+  const empty = document.getElementById('empty-state');
+  const loading = document.getElementById('loading-state');
+
+  loading.style.display = 'none';
+
+  if (datos.length === 0) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.style.display = 'table';
+
+  tbody.innerHTML = datos.map(v => {
+    return `<tr>
+      <td><span class="td-mono">${v.manifiesto || '—'}</span></td>
+      <td>${v.fecha || '—'}</td>
+      <td class="hide-mobile"><span class="td-mono">${v.placa || '—'}</span></td>
+      <td class="td-money">${fmtMoneda(v.flete)}</td>
+      <td class="hide-mobile" style="color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${v.numAnticipo || '—'}</td>
+      <td class="td-money" style="color:var(--success)">
+        ${fmt(v.anticipo) > 0 ? fmtMoneda(v.anticipo) : '<span style="color:var(--text3)">—</span>'}
+      </td>
+      <td class="hide-mobile">${v.fechaAnticipo || '—'}</td>
+      <td class="td-money" style="color:${fmt(v.valorSaldo) > 0 ? 'var(--warning)' : 'var(--text3)'}">
+        ${fmt(v.valorSaldo) > 0 ? fmtMoneda(v.valorSaldo) : '—'}
+      </td>
+      <td>${badgeSaldo(v.estadoSaldo)}</td>
+      <td class="hide-mobile">${v.estadoSaldo !== 'PAGADO' && v.fechaEstSaldo ? v.fechaEstSaldo : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function cerrarSesion() {
+  propietarioActual = null;
+  viajesActuales = [];
+  document.getElementById('nit-input').value = '';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('portal-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('config-banner').style.display = 'none';
+}
+
+// Enter para login
+document.getElementById('nit-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+</script>
+</body>
+</html>
