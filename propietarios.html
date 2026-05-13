@@ -580,17 +580,11 @@ const DEMO_VIAJES = [
 let viajesActuales = [];
 let propietarioActual = null;
 
-function calcEstado(anticipo, valorSaldo, fechaSaldo) {
-  const val = fmt(valorSaldo);
-  if (val === 0) return 'PAGADO';
-  // Si tiene fecha de saldo estimada y ya pasó → vencido
-  if (fechaSaldo) {
-    const partes = fechaSaldo.split('/');
-    if (partes.length === 3) {
-      const fechaEst = new Date(partes[2], partes[1]-1, partes[0]);
-      if (fechaEst < new Date()) return 'VENCIDO';
-    }
-  }
+function calcEstado(anticipo, valorSaldo, flete) {
+  // PAGADO cuando anticipo + saldo >= valor manifiesto
+  const total = fmt(anticipo) + fmt(valorSaldo);
+  const valorFlete = fmt(flete);
+  if (valorFlete > 0 && total >= valorFlete) return 'PAGADO';
   return 'PENDIENTE';
 }
 
@@ -655,7 +649,7 @@ async function handleLogin() {
       // Buscar en VIAJES TERCEROS: A=PROPIETARIO, B=ID PROPIETARIO, C=FECHA VIAJE,
       // D=PLACA, E=MANIFIESTO, F=VALOR MANIFIESTO, G=ANTICIPO (num),
       // H=VALOR ANTICIPO, I=FECHA PAGO ANTICIPO, J=FECHA SALDO, K=VALOR SALDO
-      const viajeRows = await fetchSheet(`'${HOJA_VIAJES}'!A2:K`);
+      const viajeRows = await fetchSheet(`'${HOJA_VIAJES}'!A2:M`);
 
       // Login por CEDULA (col B), nombre es col A
       const matchProp = propRows.find(r => r[1]?.trim() === nit);
@@ -675,8 +669,8 @@ async function handleLogin() {
             fechaAnticipo: r[8]  || '',
             fechaEstSaldo: r[9]  || '',
             valorSaldo:    r[10] || 0,
-            // Estado: si VALOR SALDO > 0 y sin fecha pago → pendiente; si = 0 → pagado
-            estadoSaldo: calcEstado(r[7], r[10], r[9]),
+            // Col L (r[11]) = anticipo + saldo ya calculado en el Sheet
+            estadoSaldo: calcEstado(r[7], r[10], r[5]),
           }));
       }
     }
