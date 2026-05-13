@@ -580,11 +580,10 @@ const DEMO_VIAJES = [
 let viajesActuales = [];
 let propietarioActual = null;
 
-function calcEstado(anticipo, valorSaldo, flete) {
-  // PAGADO cuando anticipo + saldo >= valor manifiesto
-  const total = fmt(anticipo) + fmt(valorSaldo);
-  const valorFlete = fmt(flete);
-  if (valorFlete > 0 && total >= valorFlete) return 'PAGADO';
+function calcEstado(fechaEstSaldo, fechaPagoAnticipo) {
+  // PAGADO solo si tiene fecha estimada de saldo Y fecha de pago de anticipo
+  if (fechaEstSaldo && fechaEstSaldo.trim() !== '' &&
+      fechaPagoAnticipo && fechaPagoAnticipo.trim() !== '') return 'PAGADO';
   return 'PENDIENTE';
 }
 
@@ -670,7 +669,7 @@ async function handleLogin() {
             fechaEstSaldo: r[9]  || '',
             valorSaldo:    r[10] || 0,
             // Col L (r[11]) = anticipo + saldo ya calculado en el Sheet
-            estadoSaldo: calcEstado(r[7], r[10], r[5]),
+            estadoSaldo: (r[12] && r[12].trim() !== '') ? r[12].trim() : calcEstado(r[9], r[8]),
           }));
       }
     }
