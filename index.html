@@ -177,11 +177,24 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <select id="sel-mes-flota" onchange="cambiarMesFlota(this.value)"></select>
     <span id="flota-hoja-lbl" style="font-size:11px;color:var(--muted2)">Hoja: <b id="flota-hoja-nom" style="color:var(--accent)">—</b></span>
   </div>
-  <div class="kpi-strip" id="kpi-flota"></div>
+  <div id="kpi-flota-wrap" style="margin-bottom:18px;">
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--blue);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block;flex-shrink:0;"></span>
+      Operación Urbana
+      <span style="flex:1;height:1px;background:rgba(74,158,255,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-urbanos" style="margin-bottom:14px;"></div>
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>
+      Operación Nacional
+      <span style="flex:1;height:1px;background:rgba(232,160,32,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-nacional"></div>
+  </div>
   <div class="row c64">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Vehículos — Meta vs Real</div></div>
-      <table class="ftbl"><thead><tr><th>Placa</th><th>Conductor</th><th>Estado</th><th class="bar-td">Avance</th><th class="r">Real</th><th class="r">Meta</th><th class="r">%</th></tr></thead>
+      <table class="ftbl"><thead><tr><th>Placa</th><th>Conductor</th><th>Estado</th><th class="bar-td">Avance</th><th class="r">Real</th><th class="r">Esp. Hoy</th><th class="r">Meta</th><th class="r">% Meta</th><th class="r">% Fecha</th></tr></thead>
       <tbody id="fleet-tbody"></tbody></table>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
