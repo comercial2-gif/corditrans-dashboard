@@ -359,6 +359,63 @@
   .badge-info    .badge-dot { background: var(--blue); }
   .badge-neutral .badge-dot { background: var(--text3); }
 
+  /* FILTROS AVANZADOS */
+  .filtros-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+  .filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 140px;
+  }
+  .filtro-group label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .filtro-input {
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+  .filtro-input:focus { border-color: var(--accent); background: white; }
+  .filtro-select { padding: 0 28px 0 10px; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239e9b95' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; }
+  .btn-limpiar {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-limpiar:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5b8b8; }
+
   /* EMPTY STATE */
   .empty-state {
     text-align: center;
@@ -498,10 +555,28 @@
     <div class="section-header">
       <span class="section-title">Relación de viajes</span>
       <div class="filter-row">
-        <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
-        <button class="filter-btn" onclick="filtrar('pendiente', this)">Saldo pendiente</button>
-        <button class="filter-btn" onclick="filtrar('pagado', this)">Pagados</button>
+        <button class="filter-btn active" onclick="setEstado('todos', this)">Todos</button>
+        <button class="filter-btn" onclick="setEstado('pendiente', this)">Pendiente</button>
+        <button class="filter-btn" onclick="setEstado('pagado', this)">Pagados</button>
       </div>
+    </div>
+
+    <div class="filtros-wrap">
+      <div class="filtro-group">
+        <label>Desde</label>
+        <input type="date" class="filtro-input" id="filtro-desde" onchange="aplicarFiltros()">
+      </div>
+      <div class="filtro-group">
+        <label>Hasta</label>
+        <input type="date" class="filtro-input" id="filtro-hasta" onchange="aplicarFiltros()">
+      </div>
+      <div class="filtro-group">
+        <label>Placa</label>
+        <select class="filtro-input filtro-select" id="filtro-placa" onchange="aplicarFiltros()">
+          <option value="">Todas las placas</option>
+        </select>
+      </div>
+      <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
     </div>
 
     <div class="table-wrap">
@@ -514,6 +589,7 @@
           <tr>
             <th>Manifiesto</th>
             <th>Fecha viaje</th>
+            <th class="hide-mobile">Cliente</th>
             <th class="hide-mobile">Placa</th>
             <th class="hide-mobile">Contenedor</th>
             <th>Valor flete</th>
@@ -661,6 +737,7 @@ async function handleLogin() {
           .map(r => ({
             nit:           r[1]  || '',
             fecha:         r[2]  || '',
+            cliente:       r[3]  || '',
             placa:         r[4]  || '',
             contenedor:    r[5]  || '',
             manifiesto:    r[6]  || '',
@@ -707,7 +784,8 @@ function mostrarPortal() {
   document.getElementById('portal-screen').style.display = 'block';
 
   calcularKPIs();
-  renderTabla('todos');
+  cargarPlacas();
+  aplicarFiltros();
 }
 
 function calcularKPIs() {
@@ -722,16 +800,75 @@ function calcularKPIs() {
   document.getElementById('kpi-saldos').textContent   = fmtMoneda(totalSaldo);
 }
 
-function filtrar(estado, btn) {
+// Estado de filtros global
+let filtroEstado = 'todos';
+
+function setEstado(estado, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderTabla(estado);
+  filtroEstado = estado;
+  aplicarFiltros();
 }
 
-function renderTabla(filtro) {
+function parseFecha(str) {
+  if (!str) return null;
+  // Soporta d/m/yyyy y yyyy-mm-dd
+  if (str.includes('-') && str.length === 10) return new Date(str);
+  const p = str.split('/');
+  if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+  return null;
+}
+
+function aplicarFiltros() {
+  const desde   = document.getElementById('filtro-desde').value;
+  const hasta   = document.getElementById('filtro-hasta').value;
+  const placa   = document.getElementById('filtro-placa').value;
+
   let datos = viajesActuales;
-  if (filtro === 'pendiente') datos = datos.filter(v => v.estadoSaldo !== 'PAGADO');
-  if (filtro === 'pagado')    datos = datos.filter(v => v.estadoSaldo === 'PAGADO');
+
+  // Filtro estado
+  if (filtroEstado === 'pendiente') datos = datos.filter(v => v.estadoSaldo !== 'PAGADO');
+  if (filtroEstado === 'pagado')    datos = datos.filter(v => v.estadoSaldo === 'PAGADO');
+
+  // Filtro fecha desde
+  if (desde) {
+    const d = new Date(desde);
+    datos = datos.filter(v => { const f = parseFecha(v.fecha); return f && f >= d; });
+  }
+
+  // Filtro fecha hasta
+  if (hasta) {
+    const h = new Date(hasta); h.setHours(23,59,59);
+    datos = datos.filter(v => { const f = parseFecha(v.fecha); return f && f <= h; });
+  }
+
+  // Filtro placa
+  if (placa) datos = datos.filter(v => v.placa === placa);
+
+  renderTabla(datos);
+}
+
+function limpiarFiltros() {
+  document.getElementById('filtro-desde').value = '';
+  document.getElementById('filtro-hasta').value = '';
+  document.getElementById('filtro-placa').value = '';
+  filtroEstado = 'todos';
+  document.querySelectorAll('.filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  aplicarFiltros();
+}
+
+function cargarPlacas() {
+  const placas = [...new Set(viajesActuales.map(v => v.placa).filter(Boolean))].sort();
+  const sel = document.getElementById('filtro-placa');
+  sel.innerHTML = '<option value="">Todas las placas</option>';
+  placas.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+}
+
+function renderTabla(datos) {
 
   const tbody = document.getElementById('viajes-body');
   const table = document.getElementById('viajes-table');
@@ -753,6 +890,7 @@ function renderTabla(filtro) {
     return `<tr>
       <td><span class="td-mono">${v.manifiesto || '—'}</span></td>
       <td>${v.fecha || '—'}</td>
+      <td class="hide-mobile" style="color:var(--text2)">${v.cliente || '—'}</td>
       <td class="hide-mobile"><span class="td-mono">${v.placa || '—'}</span></td>
       <td class="hide-mobile" style="color:var(--text2)">${v.contenedor || '—'}</td>
       <td class="td-money">${fmtMoneda(v.flete)}</td>
