@@ -211,7 +211,7 @@
   .btn-salir:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5b8b8; }
 
   .portal-content {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 2rem 2rem;
   }
@@ -295,9 +295,13 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    width: 100%;
   }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; min-width: 1300px; border-collapse: collapse; white-space: nowrap; }
   thead tr {
     background: var(--surface2);
     border-bottom: 1px solid var(--border);
@@ -466,7 +470,7 @@
 
   @media (max-width: 600px) {
     .portal-content { padding: 1rem; }
-    th.hide-mobile, td.hide-mobile { display: none; }
+    
     .kpi-grid { grid-template-columns: 1fr 1fr; }
     .header { padding: 0 1rem; }
   }
@@ -600,16 +604,16 @@
           <tr>
             <th>Manifiesto</th>
             <th>Fecha viaje</th>
-            <th class="hide-mobile">Cliente</th>
-            <th class="hide-mobile">Placa</th>
-            <th class="hide-mobile">Contenedor</th>
+            <th class="">Cliente</th>
+            <th class="">Placa</th>
+            <th class="">Contenedor</th>
             <th>Valor flete</th>
-            <th class="hide-mobile">N° anticipo</th>
+            <th class="">N° anticipo</th>
             <th>Valor anticipo</th>
-            <th class="hide-mobile">F. pago anticipo</th>
+            <th class="">F. pago anticipo</th>
             <th>Saldo</th>
             <th>Estado</th>
-            <th class="hide-mobile">F. est. saldo</th>
+            <th class="">F. est. saldo</th>
           </tr>
         </thead>
         <tbody id="viajes-body"></tbody>
@@ -918,20 +922,20 @@ function renderTabla(datos) {
     return `<tr>
       <td><span class="td-mono">${v.manifiesto || '—'}</span></td>
       <td>${v.fecha || '—'}</td>
-      <td class="hide-mobile" style="color:var(--text2)">${v.cliente || '—'}</td>
-      <td class="hide-mobile"><span class="td-mono">${v.placa || '—'}</span></td>
-      <td class="hide-mobile" style="color:var(--text2)">${v.contenedor || '—'}</td>
+      <td class="" style="color:var(--text2)">${v.cliente || '—'}</td>
+      <td class=""><span class="td-mono">${v.placa || '—'}</span></td>
+      <td class="" style="color:var(--text2)">${v.contenedor || '—'}</td>
       <td class="td-money">${fmtMoneda(v.flete)}</td>
-      <td class="hide-mobile" style="color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${v.numAnticipo || '—'}</td>
+      <td class="" style="color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${v.numAnticipo || '—'}</td>
       <td class="td-money" style="color:var(--success)">
         ${fmt(v.anticipo) > 0 ? fmtMoneda(v.anticipo) : '<span style="color:var(--text3)">—</span>'}
       </td>
-      <td class="hide-mobile">${v.fechaAnticipo || '—'}</td>
+      <td class="">${v.fechaAnticipo || '—'}</td>
       <td class="td-money" style="color:${fmt(v.valorSaldo) > 0 ? 'var(--warning)' : 'var(--text3)'}">
         ${fmt(v.valorSaldo) > 0 ? fmtMoneda(v.valorSaldo) : '—'}
       </td>
       <td>${badgeSaldo(v.estadoSaldo)}</td>
-      <td class="hide-mobile">${v.estadoSaldo !== 'PAGADO' && v.fechaEstSaldo ? v.fechaEstSaldo : '—'}</td>
+      <td class="">${v.estadoSaldo !== 'PAGADO' && v.fechaEstSaldo ? v.fechaEstSaldo : '—'}</td>
     </tr>`;
   }).join('');
 }
