@@ -515,6 +515,7 @@
             <th>Manifiesto</th>
             <th>Fecha viaje</th>
             <th class="hide-mobile">Placa</th>
+            <th class="hide-mobile">Contenedor</th>
             <th>Valor flete</th>
             <th class="hide-mobile">N° anticipo</th>
             <th>Valor anticipo</th>
@@ -580,10 +581,10 @@ const DEMO_VIAJES = [
 let viajesActuales = [];
 let propietarioActual = null;
 
-function calcEstado(fechaEstSaldo, fechaPagoAnticipo) {
-  // PAGADO solo si tiene fecha estimada de saldo Y fecha de pago de anticipo
+function calcEstado(fechaEstSaldo, valorSaldo) {
+  // PAGADO solo si tiene fecha estimada de saldo Y valor saldo mayor a 0
   if (fechaEstSaldo && fechaEstSaldo.trim() !== '' &&
-      fechaPagoAnticipo && fechaPagoAnticipo.trim() !== '') return 'PAGADO';
+      fmt(valorSaldo) > 0) return 'PAGADO';
   return 'PENDIENTE';
 }
 
@@ -648,7 +649,7 @@ async function handleLogin() {
       // Buscar en VIAJES TERCEROS: A=PROPIETARIO, B=ID PROPIETARIO, C=FECHA VIAJE,
       // D=PLACA, E=MANIFIESTO, F=VALOR MANIFIESTO, G=ANTICIPO (num),
       // H=VALOR ANTICIPO, I=FECHA PAGO ANTICIPO, J=FECHA SALDO, K=VALOR SALDO
-      const viajeRows = await fetchSheet(`'${HOJA_VIAJES}'!A2:M`);
+      const viajeRows = await fetchSheet(`'${HOJA_VIAJES}'!A2:O`);
 
       // Login por CEDULA (col B), nombre es col A
       const matchProp = propRows.find(r => r[1]?.trim() === nit);
@@ -659,17 +660,17 @@ async function handleLogin() {
           .filter(r => r[1]?.trim() === nit)
           .map(r => ({
             nit:           r[1]  || '',
-            manifiesto:    r[4]  || '',
             fecha:         r[2]  || '',
-            placa:         r[3]  || '',
-            flete:         r[5]  || 0,
-            numAnticipo:   r[6]  || '',
-            anticipo:      r[7]  || 0,
-            fechaAnticipo: r[8]  || '',
-            fechaEstSaldo: r[9]  || '',
-            valorSaldo:    r[10] || 0,
-            // Col L (r[11]) = anticipo + saldo ya calculado en el Sheet
-            estadoSaldo: (r[12] && r[12].trim() !== '') ? r[12].trim() : calcEstado(r[9], r[8]),
+            placa:         r[4]  || '',
+            contenedor:    r[5]  || '',
+            manifiesto:    r[6]  || '',
+            flete:         r[7]  || 0,
+            numAnticipo:   r[8]  || '',
+            anticipo:      r[9]  || 0,
+            fechaAnticipo: r[10] || '',
+            fechaEstSaldo: r[11] || '',
+            valorSaldo:    r[12] || 0,
+            estadoSaldo: (r[14] && r[14].trim() !== '') ? r[14].trim() : calcEstado(r[11], r[12]),
           }));
       }
     }
@@ -753,6 +754,7 @@ function renderTabla(filtro) {
       <td><span class="td-mono">${v.manifiesto || '—'}</span></td>
       <td>${v.fecha || '—'}</td>
       <td class="hide-mobile"><span class="td-mono">${v.placa || '—'}</span></td>
+      <td class="hide-mobile" style="color:var(--text2)">${v.contenedor || '—'}</td>
       <td class="td-money">${fmtMoneda(v.flete)}</td>
       <td class="hide-mobile" style="color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${v.numAnticipo || '—'}</td>
       <td class="td-money" style="color:var(--success)">
