@@ -605,48 +605,73 @@ function actualizarHeader(){
 }
 
 // ── RENDER FLOTA ──
-function renderFlota(seg){
-  const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
-  const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
+function buildKpiFlota(grupo){
+  const act=grupo.filter(v=>v.estado!=="PARO"),oos=grupo.filter(v=>v.estado==="PARO");
+  const tMeta=grupo.reduce((s,v)=>s+v.meta,0),tReal=grupo.reduce((s,v)=>s+v.real,0);
   const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
+  const diasLab=grupo.length>0?grupo[0].diasLab:0;
+  const tEsperado=grupo.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
   const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
-  const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
-  document.getElementById("kpi-flota").innerHTML=`
+  const pctOp=grupo.length>0?Math.round((act.length/grupo.length)*100):0;
+  return `
     <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta mes: ${fmt(tMeta)}</div></div>
-    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tMeta*PROG)}</div></div>
-    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${seg.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
+    <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tEsperado)}</div></div>
+    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${grupo.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
     <div class="kpi cr"><div class="kpi-label">Carros en Alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">Por debajo del 70%</div></div>
     <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
-  const sorted=[...seg].sort((a,b)=>(b.meta>0?b.real/b.meta:0)-(a.meta>0?a.real/a.meta:0));
-  const tb=document.getElementById("fleet-tbody");tb.innerHTML="";
-  sorted.forEach(v=>{
-    const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.min(p,100),s=sem(p);
-    tb.innerHTML+=`<tr><td class="plate">${v.p}</td><td style="font-size:11px;color:var(--muted2);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
-      <td>${v.estado==="PARO"?`<span class="chip r">${v.oo>0?v.oo+"d ":""}Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
-      <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
-      <td class="num">${fmt(v.real)}</td><td class="num">${fmt(v.meta)}</td>
-      <td class="pct-td" style="color:${bc(p)}">${p}%</td></tr>`;
+}
+
+function renderFlota(seg){
+  // Separar vehículos por tipo usando ANALISTAS_DATA
+  const tipoMap={};
+  (ANALISTAS_DATA||[]).forEach(a=>{
+    const t=(a.tipo||"").toUpperCase();
+    tipoMap[(a.nombre||"").toUpperCase()]=t;
   });
+  const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
+  const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
+  const elUrb=document.getElementById("kpi-flota-urbanos");
+  const elNac=document.getElementById("kpi-flota-nacional");
+  if(elUrb) elUrb.innerHTML=segUrb.length>0?buildKpiFlota(segUrb):buildKpiFlota(seg);
+  if(elNac) elNac.innerHTML=segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>';
+
+  // Resto del render (tabla, panel derecho) usa datos totales
+  const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
+  const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
+  const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
+  const sorted=[...seg].sort((a,b)=>(b.meta>0?b.real/b.meta:0)-(a.meta>0?a.real/a.meta:0));
+  const tb=document.getElementById("fleet-tbody");if(tb){tb.innerHTML="";
+    sorted.forEach(v=>{
+      const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.min(p,100),s=sem(p);
+      const esperadoV=v.metaDiaria>0?v.metaDiaria*v.diasLab:v.meta*PROG;
+      tb.innerHTML+=`<tr><td class="plate">${v.p}</td><td style="font-size:11px;color:var(--muted2);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
+        <td>${v.estado==="PARO"?`<span class="chip r">${v.oo>0?v.oo+"d ":""}Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
+        <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
+        <td class="num">${fmt(v.real)}</td><td class="num" style="color:var(--muted2)">${fmt(esperadoV)}</td><td class="num">${fmt(v.meta)}</td>
+        <td class="pct-td" style="color:${bc(p)}">${p}%</td><td class="pct-td" style="color:${bc(p)};font-size:10px">${v.meta>0?Math.round((v.real/(v.meta*PROG||1))*100)+"%" :"—"}</td></tr>`;
+    });
+  }
   const ol=document.getElementById("oos-list");
-  ol.innerHTML=oos.length?"":'<div style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">Sin vehículos fuera de servicio ✓</div>';
-  oos.forEach(v=>{ol.innerHTML+=`<div class="oos-item"><div class="oos-plate">${v.p}</div><div class="oos-reason">${v.c}${v.razon?" · "+v.razon:""}</div><div class="oos-days">${v.oo}d</div></div>`;});
+  if(ol){ol.innerHTML=oos.length?"":'<div style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">Sin vehículos fuera de servicio ✓</div>';
+    oos.forEach(v=>{ol.innerHTML+=`<div class="oos-item"><div class="oos-plate">${v.p}</div><div class="oos-reason">${v.c}${v.razon?" · "+v.razon:""}</div><div class="oos-days">${v.oo}d</div></div>`;});
+  }
   const circ=238.8,offset=circ-(circ*act.length/Math.max(seg.length,1));
-  document.getElementById("donut-arc").setAttribute("stroke-dashoffset",offset.toFixed(1));
-  document.getElementById("donut-pct").textContent=pctOp+"%";
-  document.getElementById("donut-legend").innerHTML=`
+  const da=document.getElementById("donut-arc");if(da)da.setAttribute("stroke-dashoffset",offset.toFixed(1));
+  const dp=document.getElementById("donut-pct");if(dp)dp.textContent=pctOp+"%";
+  const dl=document.getElementById("donut-legend");if(dl)dl.innerHTML=`
     <div class="leg-item"><div class="leg-sq" style="background:var(--green)"></div><div class="leg-label">Activos</div><div class="leg-val tg">${act.length}</div></div>
     <div class="leg-item"><div class="leg-sq" style="background:var(--red)"></div><div class="leg-label">Fuera de servicio</div><div class="leg-val tr">${oos.length}</div></div>
     <div class="leg-item"><div class="leg-sq" style="background:var(--yellow)"></div><div class="leg-label">Meta total</div><div class="leg-val">${fmt(tMeta)}</div></div>
     <div class="leg-item"><div class="leg-sq" style="background:var(--purple)"></div><div class="leg-label">Meta activos</div><div class="leg-val tp">${fmt(act.reduce((s,v)=>s+v.meta,0))}</div></div>`;
   const conParo=[...seg].filter(v=>v.oo>0).sort((a,b)=>b.oo-a.oo);
   const dpEl=document.getElementById("dias-paro-list");
-  dpEl.innerHTML=!conParo.length?'<div style="font-size:11px;color:var(--muted)">Ningún vehículo con días de paro ✓</div>'
+  if(dpEl)dpEl.innerHTML=!conParo.length?'<div style="font-size:11px;color:var(--muted)">Ningún vehículo con días de paro ✓</div>'
     :conParo.map(v=>{const bw=Math.round((v.oo/conParo[0].oo)*100);return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-family:DM Mono;font-size:11px;font-weight:600">${v.p}</span><span style="font-size:10px;color:var(--muted2)">${v.c.split(" ")[0]}</span><span style="font-family:DM Mono;font-size:12px;font-weight:700;color:var(--red)">${v.oo}d</span></div><div style="height:4px;background:var(--border)"><div style="height:100%;width:${bw}%;background:var(--red)"></div></div></div>`;}).join("");
   const enV=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)>=90).length;
   const enA=act.filter(v=>{const p=v.meta>0?Math.round((v.real/v.meta)*100):0;return p>=70&&p<90;}).length;
   const enR=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
   const proy=PROG>0?Math.round(tReal/PROG):0;
-  document.getElementById("semaforo-wrap").innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
+  const sw=document.getElementById("semaforo-wrap");if(sw)sw.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(31,200,118,.06);border:1px solid rgba(31,200,118,.15)"><span style="font-size:11px">🟢 En verde (≥90%)</span><span style="font-family:DM Mono;font-size:13px;color:var(--green)">${enV} vehículos</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(232,160,32,.06);border:1px solid rgba(232,160,32,.15)"><span style="font-size:11px">🟡 Amarillo (70–89%)</span><span style="font-family:DM Mono;font-size:13px;color:var(--yellow)">${enA} vehículos</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(232,64,64,.06);border:1px solid rgba(232,64,64,.15)"><span style="font-size:11px">🔴 En rojo (&lt;70%)</span><span style="font-family:DM Mono;font-size:13px;color:var(--red)">${enR} vehículos</span></div>
@@ -654,11 +679,12 @@ function renderFlota(seg){
   </div>`;
   const sortedR=[...seg].sort((a,b)=>(b.meta>0?b.real/b.meta:0)-(a.meta>0?a.real/a.meta:0));
   const mxR=sortedR[0]?.real||1;
-  const rl=document.getElementById("rank-flota");rl.innerHTML="";
-  sortedR.slice(0,10).forEach((v,i)=>{
-    const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.round((v.real/mxR)*100);
-    rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1;min-width:0"><div class="rank-name">${v.p}</div><div class="rank-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div><div class="rank-val" style="color:${bc(p)}">${p}% · ${fmt(v.real)}</div></div>`;
-  });
+  const rl=document.getElementById("rank-flota");if(rl){rl.innerHTML="";
+    sortedR.slice(0,10).forEach((v,i)=>{
+      const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.round((v.real/mxR)*100);
+      rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1;min-width:0"><div class="rank-name">${v.p}</div><div class="rank-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div><div class="rank-val" style="color:${bc(p)}">${p}% · ${fmt(v.real)}</div></div>`;
+    });
+  }
 }
 
 // ── RENDER CLIENTES ──
