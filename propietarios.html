@@ -500,6 +500,17 @@
       inputmode="numeric"
     />
 
+    <label class="field-label" style="margin-top:1rem" for="codigo-input">Código de acceso</label>
+    <input
+      class="field-input"
+      type="password"
+      id="codigo-input"
+      placeholder="Código de acceso"
+      autocomplete="off"
+      inputmode="numeric"
+      maxlength="4"
+    />
+
     <div class="login-error" id="login-error">
       No encontramos un propietario con ese número. Verifica e intenta de nuevo.
     </div>
@@ -638,9 +649,9 @@ const DEMO_MODE = (API_KEY === 'TU_API_KEY_AQUI');
 
 // Datos de demostración (basados en propietarios reales del Sheet)
 const DEMO_PROPIETARIOS = [
-  { nit: '901198513', nombre: 'LOGISTICA INTEGRAL' },
-  { nit: '73092921',  nombre: 'RAFAEL AYALA' },
-  { nit: '72183602',  nombre: 'JUAN REDONDO' },
+  { nit: '901198513', nombre: 'LOGISTICA INTEGRAL', codigo: '0359' },
+  { nit: '73092921',  nombre: 'RAFAEL AYALA',       codigo: '2223' },
+  { nit: '72183602',  nombre: 'JUAN REDONDO',       codigo: null   },
 ];
 
 const DEMO_VIAJES = [
@@ -700,11 +711,13 @@ async function fetchSheet(range) {
 }
 
 async function handleLogin() {
-  const nit = document.getElementById('nit-input').value.trim().replace(/\s/g, '');
-  const errEl = document.getElementById('login-error');
+  const nit    = document.getElementById('nit-input').value.trim().replace(/\s/g, '');
+  const codigo = document.getElementById('codigo-input').value.trim();
+  const errEl  = document.getElementById('login-error');
   errEl.style.display = 'none';
 
-  if (!nit) { errEl.textContent = 'Ingresa tu cédula o NIT.'; errEl.style.display = 'block'; return; }
+  if (!nit)    { errEl.textContent = 'Ingresa tu cédula o NIT.'; errEl.style.display = 'block'; return; }
+  if (!codigo) { errEl.textContent = 'Ingresa tu código de acceso.'; errEl.style.display = 'block'; return; }
 
   const btn = document.querySelector('.btn-login');
   btn.textContent = 'Consultando...';
@@ -719,9 +732,10 @@ async function handleLogin() {
       await new Promise(r => setTimeout(r, 800));
       propietario = DEMO_PROPIETARIOS.find(p => p.nit === nit);
       if (propietario) viajes = DEMO_VIAJES.filter(v => v.nit === nit);
+      // En demo mode el codigo ya viene en el objeto
     } else {
       // Buscar en PROPIETARIOS: A=CONDUCTOR, B=CEDULA
-      const propRows  = await fetchSheet(`${HOJA_PROPIETARIOS}!A2:B`);
+      const propRows  = await fetchSheet(`${HOJA_PROPIETARIOS}!A2:C`);
       // Buscar en VIAJES TERCEROS: A=PROPIETARIO, B=ID PROPIETARIO, C=FECHA VIAJE,
       // D=PLACA, E=MANIFIESTO, F=VALOR MANIFIESTO, G=ANTICIPO (num),
       // H=VALOR ANTICIPO, I=FECHA PAGO ANTICIPO, J=FECHA SALDO, K=VALOR SALDO
@@ -730,7 +744,9 @@ async function handleLogin() {
       // Login por CEDULA (col B), nombre es col A
       const matchProp = propRows.find(r => r[1]?.trim() === nit);
       if (matchProp) {
-        propietario = { nit: matchProp[1], nombre: matchProp[0] };
+        const celular = (matchProp[2] || '').toString().trim().replace(/\s/g, '');
+        const codigo = celular.length >= 4 ? celular.slice(-4) : null;
+        propietario = { nit: matchProp[1], nombre: matchProp[0], codigo };
         // Filtrar viajes por ID PROPIETARIO (col B = r[1])
         viajes = viajeRows
           .filter(r => r[1]?.trim() === nit)
@@ -754,6 +770,18 @@ async function handleLogin() {
 
     if (!propietario) {
       errEl.textContent = 'No encontramos un propietario con ese número. Verifica e intenta de nuevo.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Validar código
+    if (!propietario.codigo) {
+      errEl.textContent = 'Tu acceso aún no está configurado. Contacta a operaciones.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (codigo !== propietario.codigo) {
+      errEl.textContent = 'Código incorrecto. Recuerda que son los últimos 4 dígitos de tu celular registrado.';
       errEl.style.display = 'block';
       return;
     }
@@ -912,6 +940,7 @@ function cerrarSesion() {
   propietarioActual = null;
   viajesActuales = [];
   document.getElementById('nit-input').value = '';
+  document.getElementById('codigo-input').value = '';
   document.getElementById('login-error').style.display = 'none';
   document.getElementById('portal-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -920,6 +949,9 @@ function cerrarSesion() {
 
 // Enter para login
 document.getElementById('nit-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('codigo-input').focus();
+});
+document.getElementById('codigo-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') handleLogin();
 });
 </script>
