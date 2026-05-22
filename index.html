@@ -507,7 +507,7 @@ async function cargarSheet(id){
   SEG_DATA=procesarSeg(filasSeg);
   ALL_FILAS=filasTA;
   ANALISTAS_DATA=filasAna.length
-    ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
+    ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
   MODO="live";
   const now=new Date();
@@ -641,12 +641,18 @@ function renderFlota(seg){
     const t=(a.tipo||"").toUpperCase();
     tipoMap[(a.nombre||"").toUpperCase()]=t;
   });
+  // Debug: verificar cuántos vehículos tienen analista asignado y tipo detectado
+  const sinTipo=seg.filter(v=>!tipoMap[(v.analista||"").toUpperCase()]);
+  if(sinTipo.length>0)console.warn("Vehículos sin tipo detectado:",sinTipo.map(v=>v.p+"="+v.analista));
   const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
   const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
   const elUrb=document.getElementById("kpi-flota-urbanos");
   const elNac=document.getElementById("kpi-flota-nacional");
-  if(elUrb) elUrb.innerHTML=segUrb.length>0?buildKpiFlota(segUrb):buildKpiFlota(seg);
-  if(elNac) elNac.innerHTML=segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>';
+  // Si no hay separación (ANALISTAS_DATA sin tipo), mostrar todos en urbanos
+  const hayTipos=segUrb.length>0||segNac.length>0;
+  if(elUrb) elUrb.innerHTML=hayTipos?(segUrb.length>0?buildKpiFlota(segUrb):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>'):buildKpiFlota(seg);
+  if(elNac) elNac.innerHTML=hayTipos?(segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>'):'<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
+
 
   // Resto del render (tabla, panel derecho) usa datos totales
   const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
@@ -814,4 +820,4 @@ window.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 </body>
-</html>
+</html>|
