@@ -311,7 +311,7 @@ let SHEET_ID=localStorage.getItem(SK)||'';
 let MES_FLOTA=localStorage.getItem(SK_MF)||(()=>{const m=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];return m[new Date().getMonth()];})();
 let MES_CLI=localStorage.getItem(SK_MC)||'';
 let MODO='demo', PROG=0.74;
-let ALL_FILAS=[], ANALISTAS_DATA=[], SEG_DATA=[];
+let ALL_FILAS=[], TOTAL_FILAS=[], ANALISTAS_DATA=[], SEG_DATA=[];
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const TC=['#4a9eff','#f0a020','#1fc876','#e84040','#c44fff','#ffd700','#ff6b35','#00d4b8','#ff4da6','#a8e063','#7b68ee','#20c4d4'];
 
@@ -516,14 +516,14 @@ async function cargarSheet(id){
     if(fn)fn.textContent=MES_FLOTA+" (hoja no encontrada)";
     console.warn("Hoja de flota no encontrada:",MES_FLOTA);
   }
-  const [filasTA,filasAna]=await Promise.all([
+  const [filasTA,filasTotalAna,filasAna]=await Promise.all([
     fetchCSV(id,"RESUMEN").catch(()=>[]),
+    fetchCSV(id,"TOTAL ANALISTAS").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
   ]);
   SEG_DATA=procesarSeg(filasSeg);
-  console.log("🔍 filasSeg crudas:",filasSeg.length, filasSeg[0]?Object.keys(filasSeg[0]):[]);
-  console.log("🔍 SEG_DATA procesado:",SEG_DATA.length, SEG_DATA[0]);
   ALL_FILAS=filasTA;
+  TOTAL_FILAS=filasTotalAna;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
@@ -812,12 +812,26 @@ function renderClientes(clientes){
   // ── TABLA URBANO vs NACIONAL POR CLIENTE ──
   const tabUrNac=document.getElementById("tabla-urb-nac");
   if(tabUrNac){
+    // Filtrar TOTAL_FILAS por mes
+    const mesNombreActual=(MES_CLI||"").toUpperCase();
+    const mesNumActual=MESES.findIndex(m=>m.toUpperCase()===mesNombreActual)+1||0;
+    const filasFiltradas=TOTAL_FILAS.filter(r=>{
+      if(mesNumActual>0){
+        const f=parseFecha(r["FECHA"]||"");
+        if(f&&f.getMonth()+1!==mesNumActual) return false;
+      }
+      return true;
+    });
     const mapUN={};
-    clientes.forEach(c=>{
-      const k=c.nombre.trim();
-      if(!mapUN[k]) mapUN[k]={nombre:k,urb:0,nac:0};
-      mapUN[k].urb+=(c.facUrb||0);
-      mapUN[k].nac+=(c.facNac||0);
+    filasFiltradas.forEach(r=>{
+      const cli=(r["CLIENTE"]||"").trim();if(!cli)return;
+      const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+      const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+      const cobro=pMoney(r["COBRO REMESA"]||r["COBRO"]||"0");
+      const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
+      if(!mapUN[cli]) mapUN[cli]={nombre:cli,urb:0,nac:0};
+      if(esUrbano) mapUN[cli].urb+=cobro;
+      else mapUN[cli].nac+=cobro;
     });
     const rowsUN=Object.values(mapUN).filter(c=>c.urb>0||c.nac>0).sort((a,b)=>(b.urb+b.nac)-(a.urb+a.nac));
     tabUrNac.innerHTML=rowsUN.map(c=>`<tr>
