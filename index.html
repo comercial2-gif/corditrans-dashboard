@@ -237,7 +237,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="row c53">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Facturación por Cliente</div></div>
-      <table class="ftbl"><thead><tr><th>Cliente</th><th>Analista</th><th>Ops</th><th class="bar-td">Participación</th><th class="r">Facturado</th></tr></thead>
+      <table class="ftbl"><thead><tr><th>Cliente</th><th>Analista</th><th>Ops</th><th class="bar-td">Participación</th><th class="r" style="color:var(--blue)">🔵 Urbano</th><th class="r" style="color:var(--accent)">🟡 Nacional</th><th class="r">Total</th></tr></thead>
       <tbody id="client-tbody"></tbody></table>
     </div>
     <div class="card">
@@ -254,6 +254,23 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       </div>
     </div>
   </div>
+
+  <!-- TABLA URBANO vs NACIONAL POR CLIENTE -->
+  <div class="card" style="margin-top:10px;">
+    <div class="card-head">
+      <div class="card-title"><span class="dot-t" style="background:var(--green)"></span>Facturación por Cliente — Urbano vs Nacional</div>
+    </div>
+    <table class="ftbl">
+      <thead><tr>
+        <th>Cliente</th>
+        <th class="r" style="color:var(--blue)">🔵 Urbano</th>
+        <th class="r" style="color:var(--accent)">🟡 Nacional</th>
+        <th class="r">Total</th>
+      </tr></thead>
+      <tbody id="tabla-urb-nac"></tbody>
+    </table>
+  </div>
+
 </div>
 
 <!-- ANALISTAS -->
@@ -469,17 +486,24 @@ function procesarCliAnalistas(filas,mesNum){
     });
   }
   // Detectar columna de operaciones una sola vez
-  const colOps=ALL_FILAS.length>0?Object.keys(ALL_FILAS[0]).find(k=>/OPERACION|OPERACIÓN|^OPS$/i.test(k))||null:null;
+  const colOps=f.length>0?Object.keys(f[0]).find(k=>/OPERACION|OPERACIÓN|^OPS$/i.test(k))||null:null;
   const map={};
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim(),cobro=pMoney(r["COBRO REMESA"]||"0");
+    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
+    const cobro=pMoney(r["COBRO REMESA"]||r["COBRO"]||"0");
     const opsReal=colOps?parseInt(r[colOps])||1:1;
     if(!cli)return;
+    const origen=(r["ORIGEN"]||"").trim().toUpperCase();
+    const destino=(r["DESTINO"]||"").trim().toUpperCase();
+    const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
     const key=ana+"|||"+cli;
-    if(!map[key])map[key]={cli,ana,ops:0,fac:0};
-    map[key].ops+=opsReal;map[key].fac+=cobro;
+    if(!map[key])map[key]={cli,ana,ops:0,fac:0,facUrb:0,facNac:0};
+    map[key].ops+=opsReal;
+    map[key].fac+=cobro;
+    if(esUrbano) map[key].facUrb+=cobro;
+    else map[key].facNac+=cobro;
   });
-  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
+  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac,facUrb:d.facUrb,facNac:d.facNac}));
 }
 
 // ── CARGA PRINCIPAL ──
@@ -722,13 +746,15 @@ function renderClientes(clientes){
     ? kpiBloque(cliUrb,"Operación Urbana","var(--blue)")+kpiBloque(cliNac,"Operación Nacional","var(--accent)")
     : kpiBloque(clientes,"Todos","var(--purple)");
 
-  // Tabla unificada por nombre de cliente
+  // Tabla unificada por nombre de cliente con Urbano/Nacional
   const mapaUnif={};
   clientes.forEach(c=>{
     const key=c.nombre.trim();
-    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,analistas:new Set()};
+    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,facUrb:0,facNac:0,analistas:new Set()};
     mapaUnif[key].ops+=c.ops;
     mapaUnif[key].facturado+=c.facturado;
+    mapaUnif[key].facUrb+=(c.facUrb||0);
+    mapaUnif[key].facNac+=(c.facNac||0);
     if(c.analista) mapaUnif[key].analistas.add(c.analista.split(" ")[0]);
   });
   const sorted=Object.values(mapaUnif).sort((a,b)=>b.facturado-a.facturado);
@@ -736,7 +762,15 @@ function renderClientes(clientes){
   const tb=document.getElementById("client-tbody");if(tb){tb.innerHTML="";
     sorted.forEach(c=>{
       const pct=Math.round((c.facturado/mx)*100);
-      tb.innerHTML+=`<tr><td style="font-size:12px;font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(" / ")}</td><td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+      tb.innerHTML+=`<tr>
+        <td style="font-size:12px;font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
+        <td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(" / ")}</td>
+        <td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td>
+        <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td>
+        <td class="num" style="color:var(--blue)">${c.facUrb>0?fmt(c.facUrb):"—"}</td>
+        <td class="num" style="color:var(--accent)">${c.facNac>0?fmt(c.facNac):"—"}</td>
+        <td class="num">${fmt(c.facturado)}</td>
+      </tr>`;
     });
   }
   // Torta
@@ -774,6 +808,25 @@ function renderClientes(clientes){
   document.getElementById("torta-legend").innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
     return`<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:DM Mono;font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:DM Mono;font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
   }).join("");
+
+  // ── TABLA URBANO vs NACIONAL POR CLIENTE ──
+  const tabUrNac=document.getElementById("tabla-urb-nac");
+  if(tabUrNac){
+    const mapUN={};
+    clientes.forEach(c=>{
+      const k=c.nombre.trim();
+      if(!mapUN[k]) mapUN[k]={nombre:k,urb:0,nac:0};
+      mapUN[k].urb+=(c.facUrb||0);
+      mapUN[k].nac+=(c.facNac||0);
+    });
+    const rowsUN=Object.values(mapUN).filter(c=>c.urb>0||c.nac>0).sort((a,b)=>(b.urb+b.nac)-(a.urb+a.nac));
+    tabUrNac.innerHTML=rowsUN.map(c=>`<tr>
+      <td style="font-size:12px;font-weight:500;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
+      <td class="num" style="color:var(--blue)">${c.urb>0?fmt(c.urb):"—"}</td>
+      <td class="num" style="color:var(--accent)">${c.nac>0?fmt(c.nac):"—"}</td>
+      <td class="num">${fmt(c.urb+c.nac)}</td>
+    </tr>`).join("");
+  }
 }
 
 // ── RENDER ANALISTAS ──
