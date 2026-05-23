@@ -284,12 +284,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="kpi-strip" id="kpi-analistas"></div>
   <div class="row c2" style="margin-bottom:12px">
     <div class="card">
-      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--yellow)"></span>Ranking de Analistas</div></div>
-      <div class="rank-list" id="rank-analistas"></div>
+      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Urbanos — Meta vs Real</div></div>
+      <div id="bars-urbanos" style="padding-top:4px;"></div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Meta vs Real por Analista</div></div>
-      <div id="analyst-bars" style="display:flex;flex-direction:column;gap:14px;padding-top:4px;"></div>
+      <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Nacional — Meta vs Real</div></div>
+      <div id="bars-nacional" style="padding-top:4px;"></div>
     </div>
   </div>
   <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted2);margin-bottom:10px;">Detalle por Analista</div>
@@ -723,19 +723,53 @@ function renderClientes(clientes){
     document.getElementById("tc-val").textContent="$0";document.getElementById("tc-lbl").textContent="Sin datos";
     return;
   }
-  const sorted=[...clientes].sort((a,b)=>b.facturado-a.facturado);
-  const tF=clientes.reduce((s,c)=>s+c.facturado,0),tO=clientes.reduce((s,c)=>s+c.ops,0),mx=sorted[0]?.facturado||1;
-  el.innerHTML=`
-    <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
-    <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${clientes.length}</div><div class="kpi-sub">Con operación</div></div>
-    <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(sorted[0]?.facturado||0)}</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
-    <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
-    <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>`;
-  const tb=document.getElementById("client-tbody");tb.innerHTML="";
-  sorted.forEach(c=>{
-    const pct=Math.round((c.facturado/mx)*100);
-    tb.innerHTML+=`<tr><td style="font-size:12px;font-weight:500;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${(c.analista||"—").split(" ")[0]}</td><td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+
+  // Separar por tipo usando ANALISTAS_DATA
+  const tipoAna={};
+  (ANALISTAS_DATA||[]).forEach(a=>{tipoAna[(a.nombre||"").toUpperCase()]=(a.tipo||"").toUpperCase();});
+  const cliUrb=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="URBANOS");
+  const cliNac=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="NACIONAL");
+
+  function kpiBloque(lista, titulo, color){
+    if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
+    const tF=lista.reduce((s,c)=>s+c.facturado,0),tO=lista.reduce((s,c)=>s+c.ops,0);
+    const top=[...lista].sort((a,b)=>b.facturado-a.facturado)[0];
+    return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:10px;">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
+      </div>
+      <div class="kpi-strip">
+        <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
+        <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${[...new Set(lista.map(c=>c.nombre))].length}</div><div class="kpi-sub">Con operación</div></div>
+        <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(top?.facturado||0)}</div><div class="kpi-sub">${top?.nombre||"—"}</div></div>
+        <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
+        <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>
+      </div>
+    </div>`;
+  }
+
+  const hayTipos=cliUrb.length>0||cliNac.length>0;
+  el.innerHTML=hayTipos
+    ? kpiBloque(cliUrb,"Operación Urbana","var(--blue)")+kpiBloque(cliNac,"Operación Nacional","var(--accent)")
+    : `<div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(clientes.reduce((s,c)=>s+c.facturado,0))}</div><div class="kpi-sub">Acumulado mes</div></div>`;
+
+  // Tabla unificada por nombre de cliente
+  const mapaUnif={};
+  clientes.forEach(c=>{
+    const key=c.nombre.trim();
+    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,analistas:new Set()};
+    mapaUnif[key].ops+=c.ops;
+    mapaUnif[key].facturado+=c.facturado;
+    if(c.analista) mapaUnif[key].analistas.add(c.analista.split(" ")[0]);
   });
+  const sorted=Object.values(mapaUnif).sort((a,b)=>b.facturado-a.facturado);
+  const mx=sorted[0]?.facturado||1;
+  const tb=document.getElementById("client-tbody");if(tb){tb.innerHTML="";
+    sorted.forEach(c=>{
+      const pct=Math.round((c.facturado/mx)*100);
+      tb.innerHTML+=`<tr><td style="font-size:12px;font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(" / ")}</td><td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
+    });
+  }
   // Torta
   const top=sorted.slice(0,10),otros=sorted.slice(10).reduce((s,c)=>s+c.facturado,0);
   const td=otros>0?[...top,{nombre:"Otros",facturado:otros}]:top;
@@ -777,31 +811,90 @@ function renderClientes(clientes){
 function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
   if(!analistas||!analistas.length){el.innerHTML="";return;}
+
+  // Construir data por analista
   const data=analistas.map(a=>{
     const cli=(clientes||[]).filter(c=>c.analista===a.nombre);
     const tR=cli.reduce((s,c)=>s+c.facturado,0),p=a.meta>0?Math.round((tR/a.meta)*100):0;
     return{...a,tR,p,cli};
   });
-  const sorted=[...data].sort((a,b)=>b.p-a.p),mx=sorted[0]?.p||1;
-  const prom=data.length>0?Math.round(data.reduce((s,a)=>s+a.p,0)/data.length):0;
-  const enV=data.filter(a=>a.p>=90).length,enR=data.filter(a=>a.p<70).length;
-  el.innerHTML=`
-    <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div class="kpi-val">${sorted[0]?.p||0}%</div><div class="kpi-sub">${sorted[0]?.nombre||"—"}</div></div>
-    <div class="kpi cb"><div class="kpi-label">Promedio Equipo</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">Vs meta individual</div></div>
-    <div class="kpi cy"><div class="kpi-label">En Verde</div><div class="kpi-val">${enV}/${data.length}</div><div class="kpi-sub">≥ 90% de meta</div></div>
-    <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val">${enR}</div><div class="kpi-sub">Por debajo del 70%</div></div>
-    <div class="kpi cp"><div class="kpi-label">Clientes Gestionados</div><div class="kpi-val">${(clientes||[]).length}</div><div class="kpi-sub">Entre ${data.length} analistas</div></div>`;
-  const rl=document.getElementById("rank-analistas");rl.innerHTML="";
-  sorted.forEach((a,i)=>{const bw=Math.min(a.p,100);
-    rl.innerHTML+=`<div class="rank-item"><div class="rank-n">${i+1}</div><div style="flex:1"><div class="rank-name">${a.nombre}</div><div class="rank-sub">${a.cli.length} clientes</div></div><div class="rank-bb"><div class="rank-bf" data-w="${bw}" style="background:${bc(a.p)};width:0%"></div></div><div class="rank-val" style="color:${bc(a.p)}">${a.p}% · ${fmt(a.tR)}</div></div>`;
-  });
-  const bars=document.getElementById("analyst-bars");bars.innerHTML="";
-  data.forEach(a=>{bars.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px">${a.nombre}</span><span style="font-family:DM Mono;font-size:11px;color:${bc(a.p)}">${a.p}%</span></div><div style="position:relative;height:5px;background:var(--border)"><div class="bar-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%;height:100%"></div><div style="position:absolute;top:-4px;left:${Math.round(PROG*100)}%;width:1.5px;height:13px;background:rgba(255,255,255,.2)"></div></div><div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9.5px;color:var(--muted)"><span>${fmt(a.tR)} real</span><span>${a.meta>0?fmt(a.meta)+" meta":"Sin meta"}</span></div></div>`;});
-  const grid=document.getElementById("analyst-grid");grid.innerHTML="";
-  data.forEach(a=>{
-    const rows=a.cli.map(c=>`<tr><td style="color:var(--text);padding-right:8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td class="r" style="color:var(--muted2)">${c.ops} ops</td><td class="r">${fmt(c.facturado)}</td></tr>`).join("");
-    grid.innerHTML+=`<div class="acard"><div class="ahdr"><div class="avtr" style="background:${a.color}">${a.nombre[0]}</div><div><div class="aname">${a.nombre}</div><div class="acli">${a.cli.length} clientes · ${a.cli.reduce((s,c)=>s+c.ops,0)} ops</div></div><span class="chip ${sem(a.p).c}" style="margin-left:auto">${a.p}%</span></div><div class="akpis"><div class="ak"><div class="ak-val" style="color:${bc(a.p)}">${fmt(a.tR)}</div><div class="ak-lbl">Real</div></div><div class="ak"><div class="ak-val">${a.meta>0?fmt(a.meta):"—"}</div><div class="ak-lbl">Meta</div></div><div class="ak"><div class="ak-val tm">${a.meta>0?fmt(a.meta*PROG):"—"}</div><div class="ak-lbl">Esperado</div></div></div><div class="prog-lbl"><span>Avance</span><span style="color:${bc(a.p)}">${a.p}%</span></div><div class="prog-bg"><div class="prog-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%"></div></div><table class="cmini"><tr style="border-top:none"><td colspan="3" style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding-top:8px;border-top:none">Clientes</td></tr>${rows||"<tr><td colspan=\"3\" style=\"color:var(--muted)\">Sin clientes</td></tr>"}</table></div>`;
-  });
+
+  // Separar por tipo
+  const urbanos=data.filter(a=>(a.tipo||"").toUpperCase()==="URBANOS");
+  const nacional=data.filter(a=>(a.tipo||"").toUpperCase()==="NACIONAL");
+  const hayTipos=urbanos.length>0||nacional.length>0;
+  const gruposKpi=hayTipos?[{lista:urbanos,titulo:"Urbanos",color:"var(--blue)"},{lista:nacional,titulo:"Nacional",color:"var(--accent)"}]:[{lista:data,titulo:"Todos",color:"var(--purple)"}];
+
+  // KPI bloques
+  el.innerHTML=`<div style="display:grid;grid-template-columns:${gruposKpi.length>1?"1fr 1fr":"1fr"};gap:10px;">`+gruposKpi.map(g=>kpiStrip(g.lista,g.titulo,g.color)).join("")+"</div>";
+
+  // Barras META VS REAL — separadas por tipo
+  const barsEl=document.getElementById("analyst-bars");
+  const barsUrbEl=document.getElementById("bars-urbanos");
+  const barsNacEl=document.getElementById("bars-nacional");
+
+  // Renderizar en contenedores separados si existen, si no en el único
+  const diasLabHoy=SEG_DATA.length>0?SEG_DATA[0].diasLab:0;
+  const now2=new Date(),mesActualNum2=now2.getMonth()+1,mesSeleccionado2=parseInt(MES_CLI)||mesActualNum2;
+  const esMesActual2=mesSeleccionado2===mesActualNum2;
+
+  function renderBarsGrupo(elId,grupo){
+    const el=document.getElementById(elId);if(!el)return;
+    const sorted=[...grupo].sort((a,b)=>b.tR-a.tR);
+    el.innerHTML="";
+    sorted.forEach(a=>{
+      const pMeta=a.meta>0?Math.round((a.tR/a.meta)*100):0;
+      const esperadoHoy=esMesActual2?a.meta*PROG:a.meta;
+      const pEsp=esperadoHoy>0?Math.round((a.tR/esperadoHoy)*100):0;
+      const colMeta=bc(pMeta),colEsp=bc(pEsp);
+      const marcador=Math.round(PROG*100);
+      const totalOps=a.cli?a.cli.reduce((s,c)=>s+c.ops,0):0;
+      el.innerHTML+=`<div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:14px;font-weight:600;color:var(--text)">${a.nombre}</span>
+            <span style="font-family:'DM Mono';font-size:11px;color:var(--muted2);background:var(--surface2);border:1px solid var(--border2);padding:2px 8px;">${totalOps} ops</span>
+          </div>
+          <div style="display:flex;gap:18px;align-items:flex-start">
+            <div style="text-align:right">
+              <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:1px">${esMesActual2?"Esperado hoy":"Cierre esperado"}</div>
+              <div style="font-family:'DM Mono';font-size:13px;font-weight:600;color:#fff">${fmt(esperadoHoy)}</div>
+              <div style="font-family:'DM Mono';font-size:12px;font-weight:700;color:${colEsp}">${pEsp}%</div>
+            </div>
+            <div style="width:1px;height:36px;background:var(--border2);margin-top:2px"></div>
+            <div style="text-align:right">
+              <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:1px">Meta mes</div>
+              <div style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--muted2)">${a.meta>0?fmt(a.meta):"—"}</div>
+              <div style="font-family:'DM Mono';font-size:12px;font-weight:700;color:${colMeta}">${pMeta}%</div>
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;height:6px;background:var(--border)">
+          <div class="bar-fg" data-w="${Math.min(pMeta,100)}" style="background:${colMeta};width:0%;height:100%"></div>
+          <div style="position:absolute;top:-4px;left:${marcador}%;width:1.5px;height:14px;background:rgba(255,255,255,.35)"></div>
+        </div>
+        <div style="margin-top:5px">
+          <span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:#fff">${fmt(a.tR)}</span>
+          <span style="font-size:10px;color:var(--muted2);margin-left:4px">real facturado</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  if(hayTipos){
+    renderBarsGrupo("bars-urbanos",urbanos);
+    renderBarsGrupo("bars-nacional",nacional);
+  } else {
+    renderBarsGrupo("bars-urbanos",data);
+  }
+
+  // Cards de analistas
+  const grid=document.getElementById("analyst-grid");if(grid){grid.innerHTML="";
+    data.forEach(a=>{
+      const rows=a.cli.map(c=>`<tr><td style="color:var(--text);padding-right:8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td class="r" style="color:var(--muted2)">${c.ops} ops</td><td class="r">${fmt(c.facturado)}</td></tr>`).join("");
+      grid.innerHTML+=`<div class="acard"><div class="ahdr"><div class="avtr" style="background:${a.color}">${a.nombre[0]}</div><div><div class="aname">${a.nombre}</div><div class="acli">${a.cli.length} clientes · ${a.cli.reduce((s,c)=>s+c.ops,0)} ops</div></div><span class="chip ${sem(a.p).c}" style="margin-left:auto">${a.p}%</span></div><div class="akpis"><div class="ak"><div class="ak-val" style="color:${bc(a.p)}">${fmt(a.tR)}</div><div class="ak-lbl">Real</div></div><div class="ak"><div class="ak-val">${a.meta>0?fmt(a.meta):"—"}</div><div class="ak-lbl">Meta</div></div><div class="ak"><div class="ak-val tm">${a.meta>0?fmt(a.meta*PROG):"—"}</div><div class="ak-lbl">Esperado</div></div></div><div class="prog-lbl"><span>Avance</span><span style="color:${bc(a.p)}">${a.p}%</span></div><div class="prog-bg"><div class="prog-fg" data-w="${Math.min(a.p,100)}" style="background:${bc(a.p)};width:0%"></div></div><table class="cmini"><tr style="border-top:none"><td colspan="3" style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding-top:8px;border-top:none">Clientes</td></tr>${rows||"<tr><td colspan=\"3\" style=\"color:var(--muted)\">Sin clientes</td></tr>"}</table></div>`;
+    });
+  }
 }
 
 function animateBars(){requestAnimationFrame(()=>{document.querySelectorAll("[data-w]").forEach(el=>{el.style.width=el.dataset.w+"%";});});}
