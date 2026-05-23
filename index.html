@@ -233,7 +233,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
     <span id="filtro-lbl" style="font-size:11px;color:var(--accent);"></span>
   </div>
-  <div class="kpi-strip" id="kpi-clientes"></div>
+  <div id="kpi-clientes" style="margin-bottom:18px;"></div>
   <div class="row c53">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Facturación por Cliente</div></div>
@@ -596,7 +596,8 @@ function limpiarFiltro(){
 }
 
 function renderCliAnalistas(){
-  const mesNum=parseInt(MES_CLI)||0;
+  const mesNombre=(MES_CLI||"").toUpperCase();
+  const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1||parseInt(MES_CLI)||0;
   const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
   if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
