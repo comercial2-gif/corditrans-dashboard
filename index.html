@@ -468,15 +468,17 @@ function procesarCliAnalistas(filas,mesNum){
       if(desde&&d<desde)return false;if(hasta&&d>hasta)return false;return true;
     });
   }
+  // Detectar columna de operaciones una sola vez
+  const colOps=ALL_FILAS.length>0?Object.keys(ALL_FILAS[0]).find(k=>/OPERACION|OPERACIÓN|^OPS$/i.test(k))||null:null;
   const map={};
   f.forEach(r=>{
     const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim(),cobro=pMoney(r["COBRO REMESA"]||"0");
+    const opsReal=colOps?parseInt(r[colOps])||1:1;
     if(!cli)return;
     const key=ana+"|||"+cli;
     if(!map[key])map[key]={cli,ana,ops:0,fac:0};
-    map[key].ops++;map[key].fac+=cobro;
+    map[key].ops+=opsReal;map[key].fac+=cobro;
   });
-  // RESUMEN no tiene ops individuales, usar facturado como proxy
   return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
 }
 
@@ -697,16 +699,18 @@ function renderClientes(clientes){
 
   function kpiBloque(lista, titulo, color){
     if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
-    const tF=lista.reduce((s,c)=>s+c.facturado,0),tO=lista.reduce((s,c)=>s+c.ops,0);
+    const tF=lista.reduce((s,c)=>s+c.facturado,0);
+    const tO=lista.reduce((s,c)=>s+c.ops,0);
+    const cliUnicos=[...new Set(lista.map(c=>c.nombre))].length;
     const top=[...lista].sort((a,b)=>b.facturado-a.facturado)[0];
-    return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:10px;">
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
+    return `<div style="border:1px solid var(--border);padding:14px 18px;margin-bottom:12px;">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
       </div>
-      <div class="kpi-strip">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
         <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
-        <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${[...new Set(lista.map(c=>c.nombre))].length}</div><div class="kpi-sub">Con operación</div></div>
-        <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(top?.facturado||0)}</div><div class="kpi-sub">${top?.nombre||"—"}</div></div>
+        <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${cliUnicos}</div><div class="kpi-sub">Con operación</div></div>
+        <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val" style="font-size:14px">${fmt(top?.facturado||0)}</div><div class="kpi-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${top?.nombre||"—"}</div></div>
         <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
         <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>
       </div>
@@ -716,7 +720,7 @@ function renderClientes(clientes){
   const hayTipos=cliUrb.length>0||cliNac.length>0;
   el.innerHTML=hayTipos
     ? kpiBloque(cliUrb,"Operación Urbana","var(--blue)")+kpiBloque(cliNac,"Operación Nacional","var(--accent)")
-    : `<div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(clientes.reduce((s,c)=>s+c.facturado,0))}</div><div class="kpi-sub">Acumulado mes</div></div>`;
+    : kpiBloque(clientes,"Todos","var(--purple)");
 
   // Tabla unificada por nombre de cliente
   const mapaUnif={};
@@ -782,16 +786,16 @@ function kpiStrip(grupo,titulo,color){
   const enR=grupo.filter(a=>a.p<70).length;
   const tF=grupo.reduce((s,a)=>s+a.tR,0);
   const tM=grupo.reduce((s,a)=>s+a.meta,0);
-  return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;">
-    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
+  return `<div style="border:1px solid var(--border);padding:14px 18px;margin-bottom:12px;">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
       <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
     </div>
-    <div class="kpi-strip">
-      <div class="kpi cg" style="padding:10px 12px;"><div class="kpi-label">Mejor Analista</div><div style="font-family:'DM Sans';font-size:13px;font-weight:600;margin-top:4px;line-height:1.2">${mejor?mejor.nombre:"—"}</div><div class="kpi-sub">${mejor?mejor.p+"%":""}</div></div>
-      <div class="kpi cy" style="padding:10px 12px;"><div class="kpi-label">Promedio</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">${grupo.length} analistas</div></div>
-      <div class="kpi cb" style="padding:10px 12px;"><div class="kpi-label">Facturación</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Meta: ${fmt(tM)}</div></div>
-      <div class="kpi cg" style="padding:10px 12px;"><div class="kpi-label">En Verde</div><div class="kpi-val tg">${enV}</div><div class="kpi-sub">≥ 90%</div></div>
-      <div class="kpi cr" style="padding:10px 12px;"><div class="kpi-label">En Rojo</div><div class="kpi-val tr">${enR}</div><div class="kpi-sub">< 70%</div></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+      <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div style="font-family:'DM Sans';font-size:13px;font-weight:600;margin-top:4px;line-height:1.2">${mejor?mejor.nombre:"—"}</div><div class="kpi-sub">${mejor?mejor.p+"%":""}</div></div>
+      <div class="kpi cy"><div class="kpi-label">Promedio</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">${grupo.length} analistas</div></div>
+      <div class="kpi cb"><div class="kpi-label">Facturación</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Meta: ${fmt(tM)}</div></div>
+      <div class="kpi cg"><div class="kpi-label">En Verde</div><div class="kpi-val tg">${enV}</div><div class="kpi-sub">≥ 90%</div></div>
+      <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val tr">${enR}</div><div class="kpi-sub">< 70%</div></div>
     </div>
   </div>`;
 }
@@ -814,7 +818,7 @@ function renderAnalistas(clientes,analistas){
   const gruposKpi=hayTipos?[{lista:urbanos,titulo:"Urbanos",color:"var(--blue)"},{lista:nacional,titulo:"Nacional",color:"var(--accent)"}]:[{lista:data,titulo:"Todos",color:"var(--purple)"}];
 
   // KPI bloques
-  el.innerHTML=`<div style="display:grid;grid-template-columns:${gruposKpi.length>1?"1fr 1fr":"1fr"};gap:10px;">`+gruposKpi.map(g=>kpiStrip(g.lista,g.titulo,g.color)).join("")+"</div>";
+  el.innerHTML=gruposKpi.map(g=>kpiStrip(g.lista,g.titulo,g.color)).join("");
 
   // Barras META VS REAL — separadas por tipo
   const barsEl=document.getElementById("analyst-bars");
