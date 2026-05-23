@@ -827,7 +827,11 @@ function renderClientes(clientes){
       const cli=(r["CLIENTE"]||"").trim();if(!cli)return;
       const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
       const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-      const cobro=pMoney(r["COBRO REMESA"]||r["COBRO"]||"0");
+      const cobroRaw=r["COBRO REMESA"]||r["COBRO"]||"0";
+      if(!mapUN[cli]) {
+        console.log("🔍 COBRO REMESA raw:",cobroRaw,"→",pMoney(cobroRaw));
+      }
+      const cobro=pMoney(cobroRaw);
       const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
       if(!mapUN[cli]) mapUN[cli]={nombre:cli,urb:0,nac:0};
       if(esUrbano) mapUN[cli].urb+=cobro;
