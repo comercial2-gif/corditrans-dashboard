@@ -427,8 +427,11 @@ function parsearCSV(txt){
 function procesarSeg(filas){
   if(!filas.length)return[];
   const keys=Object.keys(filas[0]);
+  console.log("\U0001F50D procesarSeg keys:",keys);
+  console.log("\U0001F50D primera fila:",JSON.stringify(filas[0]));
   // Buscar columna de placa: "PLACAS", "PLACA", o primera columna
   const colPlaca=keys.find(k=>k.toUpperCase().includes("PLACA"))||keys[0];
+  console.log("\U0001F50D colPlaca:",colPlaca,"valores:",filas.slice(0,3).map(r=>r[colPlaca]));
   // Buscar columna de producción real
   const colR=keys.find(k=>k.replace(/\n/g," ").toUpperCase().includes("PRODUCCION")&&k.toUpperCase().includes("REAL"))
     ||keys.find(k=>k.replace(/\n/g," ").toUpperCase().includes("PRODUCCIÓN")&&k.toUpperCase().includes("REAL"))
@@ -443,7 +446,7 @@ function procesarSeg(filas){
   const colDiasLab=keys.find(k=>k.toUpperCase().includes("DIAS")&&k.toUpperCase().includes("LAB"))||null;
 
   return filas
-    .filter(r=>{const p=(r[colPlaca]||"").trim();return p&&p!=="Total"&&p!==colPlaca&&/^[A-Z]{2,4}\d{3}/.test(p);})
+    .filter(r=>{const p=(r[colPlaca]||"").trim();return p&&p!=="Total"&&p!==colPlaca&&/^[A-Z][-A-Z]{1,4}\d{3}/.test(p);})
     .map(r=>({
       p:(r[colPlaca]||"").trim(),
       c:r["CONDUCTOR"]||r["CONDUCTORES"]||"",
@@ -505,10 +508,13 @@ async function cargarSheet(id){
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
   ]);
   SEG_DATA=procesarSeg(filasSeg);
+  console.log("🔍 filasSeg crudas:",filasSeg.length, filasSeg[0]?Object.keys(filasSeg[0]):[]);
+  console.log("🔍 SEG_DATA procesado:",SEG_DATA.length, SEG_DATA[0]);
   ALL_FILAS=filasTA;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
+  console.log("🔍 ANALISTAS_DATA:",ANALISTAS_DATA.map(a=>a.nombre+"="+a.tipo));
   MODO="live";
   const now=new Date();
   PROG=now.getDate()/new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
@@ -820,4 +826,4 @@ window.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 </body>
-</html>|
+</html>
