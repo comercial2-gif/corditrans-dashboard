@@ -695,7 +695,10 @@ function limpiarFiltro(){
 }
 
 function renderCliAnalistas(){
-  const mesNum=parseInt(MES_CLI)||0;
+  // Convertir MES_CLI (nombre como "MAYO") a número de mes (1-12)
+  // parseInt("MAYO") = 0, por eso el filtro nunca funcionaba — esto lo corrige
+  const mesNombre=(MES_CLI||'').trim().toUpperCase();
+  const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1; // 0 si no encuentra → sin filtro
   const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
   if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
@@ -1187,13 +1190,15 @@ function renderClientes(clientes){
     if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
     const tF=lista.reduce((s,c)=>s+c.facturado,0),tO=lista.reduce((s,c)=>s+c.ops,0);
     const top=[...lista].sort((a,b)=>b.facturado-a.facturado)[0];
+    const periodoLabel = MES_CLI ? MES_CLI.charAt(0)+MES_CLI.slice(1).toLowerCase() : 'Mes actual';
     return `<div style="background:var(--surface);border:1px solid var(--border);padding:16px 18px;">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
         <span style="height:1px;flex:1;background:${color};opacity:.2;display:block;"></span>
+        <span style="font-size:9px;color:var(--muted2);text-transform:none;letter-spacing:0;font-weight:400">📅 ${periodoLabel}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-        <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
+        <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">${periodoLabel}</div></div>
         <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${[...new Set(lista.map(c=>c.nombre))].length}</div><div class="kpi-sub">Con operación</div></div>
         <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val" style="font-size:18px">${fmt(top?.facturado||0)}</div><div class="kpi-sub">${top?.nombre||"—"}</div></div>
         <div class="kpi cr"><div class="kpi-label">Total Ops</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
@@ -1277,15 +1282,17 @@ function kpiStrip(lista, titulo, color) {
   const topA  = [...lista].sort((a, b) => (b.tR || 0) - (a.tR || 0))[0];
   const enAlerta = lista.filter(a => a.p < 70).length;
   const pctColor = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--red)';
+  const periodoLabel = MES_CLI ? MES_CLI.charAt(0)+MES_CLI.slice(1).toLowerCase() : 'Mes actual';
   return `<div style="background:var(--surface);border:1px solid var(--border);padding:16px 18px;">
     <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
       <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
       <span style="font-size:9px;color:var(--muted2);font-weight:400;text-transform:none;letter-spacing:0">${lista.length} analistas</span>
       <span style="height:1px;flex:1;background:${color};opacity:.2;display:block;"></span>
+      <span style="font-size:9px;color:var(--muted2);text-transform:none;letter-spacing:0;font-weight:400">📅 ${periodoLabel}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
       <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta: ${fmt(tMeta)}</div></div>
-      <div class="kpi cy"><div class="kpi-label">Avance</div><div class="kpi-val" style="color:${pctColor}">${pct}%</div><div class="kpi-sub">vs meta del mes</div></div>
+      <div class="kpi cy"><div class="kpi-label">Avance</div><div class="kpi-val" style="color:${pctColor}">${pct}%</div><div class="kpi-sub">${periodoLabel}</div></div>
       <div class="kpi cb"><div class="kpi-label">Analistas</div><div class="kpi-val">${lista.length}</div><div class="kpi-sub">en este grupo</div></div>
       <div class="kpi cr"><div class="kpi-label">En alerta</div><div class="kpi-val" style="color:${enAlerta>0?'var(--red)':'var(--green)'}">${enAlerta}</div><div class="kpi-sub">por debajo del 70%</div></div>
       <div class="kpi cp"><div class="kpi-label">Líder del grupo</div><div class="kpi-val" style="font-size:16px;line-height:1.2">${topA?.nombre?.split(' ')[0]||'—'}</div><div class="kpi-sub">${fmt(topA?.tR||0)}</div></div>
