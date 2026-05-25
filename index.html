@@ -285,7 +285,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
             <div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Rendimiento por Tanqueo — Cumplimiento vs Referencia</div>
           </div>
           <!-- Filtro de placas para la gráfica -->
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="comb-placa-filtros"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <label style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);flex-shrink:0;">Vehículo</label>
+            <select id="comb-placa-filtros"
+              onchange="togglePlacaComb(this.value)"
+              style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+                     padding:5px 10px;font-family:'DM Sans';font-size:11px;outline:none;cursor:pointer;min-width:140px;">
+            </select>
+          </div>
           <div style="position:relative;height:220px;">
             <canvas id="chart-comb-lineas" aria-label="Gráfica de líneas de rendimiento por tanqueo por vehículo"></canvas>
           </div>
@@ -822,18 +829,19 @@ function buildLineChart(filas) {
   const placasDisponibles = Object.keys(eventosPorPlaca).sort();
   if (placasFiltradas.size === 0) placasDisponibles.forEach(p => placasFiltradas.add(p));
 
-  // Botones de filtro por placa
+  // Poblar el select con "Todos" + una opción por placa
   const filtroEl = document.getElementById('comb-placa-filtros');
   if (filtroEl) {
-    filtroEl.innerHTML = placasDisponibles.map((p, i) => {
-      const activa = placasFiltradas.has(p);
-      const col = COMB_COLORES[i % COMB_COLORES.length];
-      return `<button onclick="togglePlacaComb('${p}')"
-        style="font-family:DM Mono;font-size:9px;font-weight:600;letter-spacing:.5px;
-               padding:3px 8px;cursor:pointer;border:1px solid ${col};
-               background:${activa ? col : 'transparent'};
-               color:${activa ? '#000' : col};transition:all .2s;">${p}</button>`;
-    }).join('');
+    const selVal = filtroEl.value; // conservar selección actual si ya existe
+    filtroEl.innerHTML =
+      `<option value="__todos__">Todos los vehículos (${placasDisponibles.length})</option>` +
+      placasDisponibles.map(p =>
+        `<option value="${p}">${p}</option>`
+      ).join('');
+    // Restaurar valor previo si sigue siendo válido
+    if (selVal && (selVal === '__todos__' || placasDisponibles.includes(selVal))) {
+      filtroEl.value = selVal;
+    }
   }
 
   // Número máximo de tanqueos entre placas activas
@@ -924,14 +932,22 @@ function buildLineChart(filas) {
   });
 }
 
-function togglePlacaComb(placa) {
-  if (placasFiltradas.has(placa)) {
-    if (placasFiltradas.size === 1) return;
-    placasFiltradas.delete(placa);
+function togglePlacaComb(valor) {
+  // Si se selecciona "Todos", activar todas las placas disponibles
+  // Si se selecciona una placa específica, mostrar solo esa
+  if (!COMB_DATA || !COMB_DATA.length) return;
+
+  // Recalcular qué placas existen en los datos actuales
+  const todasPlacas = [...new Set(
+    COMB_DATA.map(r => (r['PLACA'] || '').trim().toUpperCase()).filter(Boolean)
+  )].sort();
+
+  if (valor === '__todos__') {
+    placasFiltradas = new Set(todasPlacas);
   } else {
-    placasFiltradas.add(placa);
+    placasFiltradas = new Set([valor]);
   }
-  if (COMB_DATA && COMB_DATA.length) buildLineChart(COMB_DATA);
+  buildLineChart(COMB_DATA);
 }
 
 // ── COMBUSTIBLE ──
@@ -1049,7 +1065,8 @@ function renderCombustible(filas){
   // ── Tabla por vehículo ──
   const tbody=document.getElementById('comb-tbody');
   if(tbody){
-    tbody.innerHTML=datos.map(d=>{
+    // Filas de datos por vehículo
+    const filasDatos = datos.map(d=>{
       const rendStr=d.rend>0?d.rend.toFixed(2):'—';
       const pctBar=Math.min(Math.round(d.pct*100),100);
       const col=colComb(d.estado);
@@ -1069,6 +1086,22 @@ function renderCombustible(filas){
         </td>
       </tr>`;
     }).join('');
+
+    // Fila de totales — suma de km y galones, rendimiento ponderado de la flota
+    const totKm  = datos.reduce((s,d)=>s+d.km, 0);
+    const totGal = datos.reduce((s,d)=>s+d.gal, 0);
+    const totRend= totGal>0 ? totKm/totGal : 0;
+    const filaTotal = `<tr style="border-top:2px solid var(--border2);background:rgba(255,255,255,.03)">
+      <td class="plate" style="color:var(--accent);font-size:10px;letter-spacing:1px">TOTAL</td>
+      <td style="font-size:11px;color:var(--muted2)">${datos.length} vehículos</td>
+      <td class="num" style="color:var(--text);font-weight:600">${Math.round(totKm).toLocaleString('es-CO')}</td>
+      <td class="num" style="color:var(--text);font-weight:600">${totGal.toFixed(1)}</td>
+      <td class="num" style="color:var(--accent);font-weight:700">${totRend>0?totRend.toFixed(2):'—'}</td>
+      <td class="num" style="color:var(--muted2)">—</td>
+      <td style="font-size:9px;color:var(--muted2);letter-spacing:.5px">km / galón flota</td>
+    </tr>`;
+
+    tbody.innerHTML = filasDatos + filaTotal;
   }
 
   // ── Semáforo de combustible ──
@@ -1158,7 +1191,7 @@ function renderClientes(clientes){
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
       </div>
-      <div class="kpi-strip">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px;">
         <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
         <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${[...new Set(lista.map(c=>c.nombre))].length}</div><div class="kpi-sub">Con operación</div></div>
         <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(top?.facturado||0)}</div><div class="kpi-sub">${top?.nombre||"—"}</div></div>
@@ -1240,7 +1273,7 @@ function kpiStrip(lista, titulo, color) {
     <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
       <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
     </div>
-    <div class="kpi-strip">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;">
       <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta: ${fmt(tMeta)}</div></div>
       <div class="kpi cy"><div class="kpi-label">Avance</div><div class="kpi-val">${pct}%</div><div class="kpi-sub">vs meta del mes</div></div>
       <div class="kpi cb"><div class="kpi-label">Analistas</div><div class="kpi-val">${lista.length}</div><div class="kpi-sub">en este grupo</div></div>
