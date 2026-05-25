@@ -1269,17 +1269,30 @@ function kpiStrip(lista, titulo, color) {
   const pct   = tMeta > 0 ? Math.round((tReal / tMeta) * 100) : 0;
   const topA  = [...lista].sort((a, b) => (b.tR || 0) - (a.tR || 0))[0];
   const enAlerta = lista.filter(a => a.p < 70).length;
-  return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;">
-    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
+  const pctColor = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--red)';
+
+  // Cada KPI como fila horizontal: etiqueta a la izquierda, valor a la derecha
+  const kpiRow = (label, val, sub, valColor='var(--text)') =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;
+                 padding:9px 12px;border-bottom:1px solid var(--border);">
+       <div>
+         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2)">${label}</div>
+         ${sub ? `<div style="font-size:9px;color:var(--muted);margin-top:1px">${sub}</div>` : ''}
+       </div>
+       <div style="font-family:'Bebas Neue';font-size:22px;color:${valColor};flex-shrink:0;margin-left:10px">${val}</div>
+     </div>`;
+
+  return `<div style="background:var(--surface);border:1px solid var(--border);">
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border2);
+                display:flex;align-items:center;gap:7px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};font-weight:600">${titulo}</span>
+      <span style="font-size:9px;color:var(--muted2);margin-left:auto">${lista.length} analistas</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;">
-      <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta: ${fmt(tMeta)}</div></div>
-      <div class="kpi cy"><div class="kpi-label">Avance</div><div class="kpi-val">${pct}%</div><div class="kpi-sub">vs meta del mes</div></div>
-      <div class="kpi cb"><div class="kpi-label">Analistas</div><div class="kpi-val">${lista.length}</div><div class="kpi-sub">en este grupo</div></div>
-      <div class="kpi cr"><div class="kpi-label">En alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">por debajo del 70%</div></div>
-      <div class="kpi cp"><div class="kpi-label">Líder del grupo</div><div class="kpi-val" style="font-size:14px;line-height:1.2">${topA?.nombre?.split(' ')[0] || '—'}</div><div class="kpi-sub">${fmt(topA?.tR || 0)}</div></div>
-    </div>
+    ${kpiRow('Facturación Real', fmt(tReal), `Meta: ${fmt(tMeta)}`)}
+    ${kpiRow('Avance vs Meta', pct+'%', 'del mes', pctColor)}
+    ${kpiRow('En alerta', enAlerta, 'por debajo del 70%', enAlerta > 0 ? 'var(--red)' : 'var(--green)')}
+    ${kpiRow('Líder del grupo', topA?.nombre?.split(' ')[0] || '—', fmt(topA?.tR || 0), color)}
   </div>`;
 }
 
