@@ -1227,6 +1227,29 @@ function renderClientes(clientes){
   }).join("");
 }
 
+// ── kpiStrip: bloque de KPIs para un grupo de analistas ──
+// Recibe lista de analistas (con .tR, .meta, .p, .nombre), un título y un color de acento
+function kpiStrip(lista, titulo, color) {
+  if (!lista || !lista.length) return '';
+  const tMeta = lista.reduce((s, a) => s + (a.meta || 0), 0);
+  const tReal = lista.reduce((s, a) => s + (a.tR  || 0), 0);
+  const pct   = tMeta > 0 ? Math.round((tReal / tMeta) * 100) : 0;
+  const topA  = [...lista].sort((a, b) => (b.tR || 0) - (a.tR || 0))[0];
+  const enAlerta = lista.filter(a => a.p < 70).length;
+  return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta: ${fmt(tMeta)}</div></div>
+      <div class="kpi cy"><div class="kpi-label">Avance</div><div class="kpi-val">${pct}%</div><div class="kpi-sub">vs meta del mes</div></div>
+      <div class="kpi cb"><div class="kpi-label">Analistas</div><div class="kpi-val">${lista.length}</div><div class="kpi-sub">en este grupo</div></div>
+      <div class="kpi cr"><div class="kpi-label">En alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">por debajo del 70%</div></div>
+      <div class="kpi cp"><div class="kpi-label">Líder del grupo</div><div class="kpi-val" style="font-size:14px;line-height:1.2">${topA?.nombre?.split(' ')[0] || '—'}</div><div class="kpi-sub">${fmt(topA?.tR || 0)}</div></div>
+    </div>
+  </div>`;
+}
+
 // ── RENDER ANALISTAS ──
 function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
