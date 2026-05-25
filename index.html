@@ -116,6 +116,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .kpi:nth-child(1){animation-delay:.04s}.kpi:nth-child(2){animation-delay:.08s}.kpi:nth-child(3){animation-delay:.12s}.kpi:nth-child(4){animation-delay:.16s}.kpi:nth-child(5){animation-delay:.20s}
 @media(max-width:900px){.kpi-strip{grid-template-columns:repeat(3,1fr);}.c64,.c53{grid-template-columns:1fr;}}
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -177,7 +178,20 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <select id="sel-mes-flota" onchange="cambiarMesFlota(this.value)"></select>
     <span id="flota-hoja-lbl" style="font-size:11px;color:var(--muted2)">Hoja: <b id="flota-hoja-nom" style="color:var(--accent)">—</b></span>
   </div>
-  <div class="kpi-strip" id="kpi-flota" style="margin-bottom:18px;"></div>
+  <div id="kpi-flota-wrap" style="margin-bottom:18px;">
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--blue);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block;flex-shrink:0;"></span>
+      Operación Urbana
+      <span style="flex:1;height:1px;background:rgba(74,158,255,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-urbanos" style="margin-bottom:14px;"></div>
+    <div style="margin-bottom:8px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>
+      Operación Nacional
+      <span style="flex:1;height:1px;background:rgba(232,160,32,.2);display:block;"></span>
+    </div>
+    <div class="kpi-strip" id="kpi-flota-nacional"></div>
+  </div>
   <div class="row c64">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Vehículos — Meta vs Real</div></div>
@@ -218,6 +232,81 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       <div id="semaforo-wrap"></div>
     </div>
   </div>
+
+  <!-- ── MÓDULO COMBUSTIBLE ── -->
+  <div style="margin-top:18px;">
+    <!-- Separador visual -->
+    <div style="margin-bottom:12px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--green);display:flex;align-items:center;gap:8px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
+      Combustible — Rendimiento de Flota
+      <span style="flex:1;height:1px;background:rgba(31,200,118,.2);display:block;"></span>
+      <span id="comb-estado-badge" style="font-size:9px;color:var(--muted2);letter-spacing:.5px;text-transform:none;">Cargando...</span>
+    </div>
+
+    <!-- KPIs de combustible -->
+    <div class="kpi-strip" id="kpi-comb" style="margin-bottom:14px;"></div>
+
+    <!-- Dos columnas: tabla rendimiento + viajes nacionales -->
+    <div class="row c2">
+
+      <!-- Tabla rendimiento por vehículo -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title"><span class="dot-t" style="background:var(--green)"></span>Rendimiento por Vehículo</div>
+        </div>
+        <table class="ftbl" id="tbl-comb">
+          <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Conductor</th>
+              <th class="r">Km</th>
+              <th class="r">Galones</th>
+              <th class="r">Rend.</th>
+              <th class="r">Ref.</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="comb-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Panel derecho: KPIs semáforo + viajes nacionales -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+
+        <!-- Mini semáforo de flota -->
+        <div class="card">
+          <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--purple)"></span>Semáforo Combustible</div></div>
+          <div id="comb-semaforo"></div>
+        </div>
+
+        <!-- Gráfica de líneas: rendimiento por tanqueo por placa -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head" style="margin-bottom:10px">
+            <div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Rendimiento por Tanqueo — Cumplimiento vs Referencia</div>
+          </div>
+          <!-- Filtro de placas para la gráfica -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="comb-placa-filtros"></div>
+          <div style="position:relative;height:220px;">
+            <canvas id="chart-comb-lineas" aria-label="Gráfica de líneas de rendimiento por tanqueo por vehículo"></canvas>
+          </div>
+          <div style="font-size:9px;color:var(--muted2);margin-top:6px;text-align:right">Línea punteada = referencia urbana · Punto verde = cumple · Punto rojo = no cumple</div>
+        </div>
+
+        <!-- Viajes nacionales con cliente -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Viajes Nacionales — Consumo por Cliente</div>
+          </div>
+          <div id="viajes-nac-wrap">
+            <div style="font-size:11px;color:var(--muted);padding:10px 0;text-align:center;">Sin datos de viajes nacionales aún</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- ── FIN MÓDULO COMBUSTIBLE ── -->
+
 </div>
 
 <!-- CLIENTES -->
@@ -233,11 +322,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
     <span id="filtro-lbl" style="font-size:11px;color:var(--accent);"></span>
   </div>
-  <div id="kpi-clientes" style="margin-bottom:18px;"></div>
+  <div class="kpi-strip" id="kpi-clientes"></div>
   <div class="row c53">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Facturación por Cliente</div></div>
-      <table class="ftbl"><thead><tr><th>Cliente</th><th>Analista</th><th>Ops</th><th class="bar-td">Participación</th><th class="r" style="color:var(--blue)">🔵 Urbano</th><th class="r" style="color:var(--accent)">🟡 Nacional</th><th class="r">Total</th></tr></thead>
+      <table class="ftbl"><thead><tr><th>Cliente</th><th>Analista</th><th>Ops</th><th class="bar-td">Participación</th><th class="r">Facturado</th></tr></thead>
       <tbody id="client-tbody"></tbody></table>
     </div>
     <div class="card">
@@ -254,23 +343,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       </div>
     </div>
   </div>
-
-  <!-- TABLA URBANO vs NACIONAL POR CLIENTE -->
-  <div class="card" style="margin-top:10px;">
-    <div class="card-head">
-      <div class="card-title"><span class="dot-t" style="background:var(--green)"></span>Facturación por Cliente — Urbano vs Nacional</div>
-    </div>
-    <table class="ftbl">
-      <thead><tr>
-        <th>Cliente</th>
-        <th class="r" style="color:var(--blue)">🔵 Urbano</th>
-        <th class="r" style="color:var(--accent)">🟡 Nacional</th>
-        <th class="r">Total</th>
-      </tr></thead>
-      <tbody id="tabla-urb-nac"></tbody>
-    </table>
-  </div>
-
 </div>
 
 <!-- ANALISTAS -->
@@ -285,7 +357,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <input type="date" id="ana-hasta" onchange="aplicarFiltro()"/>
     <button class="btn-clear" onclick="limpiarFiltro()">✕ Limpiar</button>
   </div>
-  <div id="kpi-analistas" style="margin-bottom:18px;"></div>
+  <div class="kpi-strip" id="kpi-analistas"></div>
   <div class="row c2" style="margin-bottom:12px">
     <div class="card">
       <div class="card-head"><div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Urbanos — Meta vs Real</div></div>
@@ -311,7 +383,7 @@ let SHEET_ID=localStorage.getItem(SK)||'';
 let MES_FLOTA=localStorage.getItem(SK_MF)||(()=>{const m=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];return m[new Date().getMonth()];})();
 let MES_CLI=localStorage.getItem(SK_MC)||'';
 let MODO='demo', PROG=0.74;
-let ALL_FILAS=[], TOTAL_FILAS=[], ANALISTAS_DATA=[], SEG_DATA=[];
+let ALL_FILAS=[], ANALISTAS_DATA=[], SEG_DATA=[];
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const TC=['#4a9eff','#f0a020','#1fc876','#e84040','#c44fff','#ffd700','#ff6b35','#00d4b8','#ff4da6','#a8e063','#7b68ee','#20c4d4'];
 
@@ -485,25 +557,16 @@ function procesarCliAnalistas(filas,mesNum){
       if(desde&&d<desde)return false;if(hasta&&d>hasta)return false;return true;
     });
   }
-  // Detectar columna de operaciones una sola vez
-  const colOps=f.length>0?Object.keys(f[0]).find(k=>/OPERACION|OPERACIÓN|^OPS$/i.test(k))||null:null;
   const map={};
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
-    const cobro=pMoney(r["COBRO REMESA"]||r["COBRO"]||"0");
-    const opsReal=colOps?parseInt(r[colOps])||1:1;
+    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim(),cobro=pMoney(r["COBRO REMESA"]||"0");
     if(!cli)return;
-    const origen=(r["ORIGEN"]||"").trim().toUpperCase();
-    const destino=(r["DESTINO"]||"").trim().toUpperCase();
-    const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
     const key=ana+"|||"+cli;
-    if(!map[key])map[key]={cli,ana,ops:0,fac:0,facUrb:0,facNac:0};
-    map[key].ops+=opsReal;
-    map[key].fac+=cobro;
-    if(esUrbano) map[key].facUrb+=cobro;
-    else map[key].facNac+=cobro;
+    if(!map[key])map[key]={cli,ana,ops:0,fac:0};
+    map[key].ops++;map[key].fac+=cobro;
   });
-  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac,facUrb:d.facUrb,facNac:d.facNac}));
+  // RESUMEN no tiene ops individuales, usar facturado como proxy
+  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
 }
 
 // ── CARGA PRINCIPAL ──
@@ -516,14 +579,15 @@ async function cargarSheet(id){
     if(fn)fn.textContent=MES_FLOTA+" (hoja no encontrada)";
     console.warn("Hoja de flota no encontrada:",MES_FLOTA);
   }
-  const [filasTA,filasTotalAna,filasAna]=await Promise.all([
+  const [filasTA,filasAna,filasComb]=await Promise.all([
     fetchCSV(id,"RESUMEN").catch(()=>[]),
-    fetchCSV(id,"TOTAL ANALISTAS").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
+    fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),   // hoja de combustible
   ]);
   SEG_DATA=procesarSeg(filasSeg);
+  console.log("🔍 filasSeg crudas:",filasSeg.length, filasSeg[0]?Object.keys(filasSeg[0]):[]);
+  console.log("🔍 SEG_DATA procesado:",SEG_DATA.length, SEG_DATA[0]);
   ALL_FILAS=filasTA;
-  TOTAL_FILAS=filasTotalAna;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
@@ -539,7 +603,9 @@ async function cargarSheet(id){
   document.getElementById("banner-live").style.display="flex";
   document.getElementById("banner-txt").textContent="● Conectado · ID: "+id.substring(0,18)+"...";
   document.getElementById("btn-act").style.display="inline-block";
+  COMB_DATA=filasComb;
   renderFlota(SEG_DATA);
+  renderCombustible(COMB_DATA);   // módulo de combustible
   renderCliAnalistas();
   setTimeout(animateBars,120);
 }
@@ -622,8 +688,7 @@ function limpiarFiltro(){
 }
 
 function renderCliAnalistas(){
-  const mesNombre=(MES_CLI||"").toUpperCase();
-  const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1||parseInt(MES_CLI)||0;
+  const mesNum=parseInt(MES_CLI)||0;
   const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
   if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
@@ -638,23 +703,46 @@ function actualizarHeader(){
 }
 
 // ── RENDER FLOTA ──
-function renderFlota(seg){
-  const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
-  const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
+function buildKpiFlota(grupo){
+  const act=grupo.filter(v=>v.estado!=="PARO"),oos=grupo.filter(v=>v.estado==="PARO");
+  const tMeta=grupo.reduce((s,v)=>s+v.meta,0),tReal=grupo.reduce((s,v)=>s+v.real,0);
   const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
-  const diasLab=seg.length>0?seg[0].diasLab:0;
-  const tEsperado=seg.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
+  const diasLab=grupo.length>0?grupo[0].diasLab:0;
+  const tEsperado=grupo.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
   const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
-  const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
-  const elF=document.getElementById("kpi-flota");
-  if(elF) elF.innerHTML=`
+  const pctOp=grupo.length>0?Math.round((act.length/grupo.length)*100):0;
+  return `
     <div class="kpi cg"><div class="kpi-label">Facturación Real</div><div class="kpi-val">${fmt(tReal)}</div><div class="kpi-sub">Meta mes: ${fmt(tMeta)}</div></div>
     <div class="kpi cy"><div class="kpi-label">Avance vs Proyectado</div><div class="kpi-val">${pctG}%</div><div class="kpi-sub">Esperado hoy: ${fmt(tEsperado)}</div></div>
-    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${seg.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
+    <div class="kpi cb"><div class="kpi-label">Flota Operativa</div><div class="kpi-val">${act.length}/${grupo.length}</div><div class="kpi-sub">${oos.length} fuera de servicio</div></div>
     <div class="kpi cr"><div class="kpi-label">Carros en Alerta</div><div class="kpi-val">${enAlerta}</div><div class="kpi-sub">Por debajo del 70%</div></div>
     <div class="kpi cp"><div class="kpi-label">Disponibilidad</div><div class="kpi-val">${pctOp}%</div><div class="kpi-sub">Flota activa vs total</div></div>`;
+}
 
-  // Resto del render (tabla, panel derecho)
+function renderFlota(seg){
+  // Separar vehículos por tipo usando ANALISTAS_DATA
+  const tipoMap={};
+  (ANALISTAS_DATA||[]).forEach(a=>{
+    const t=(a.tipo||"").toUpperCase();
+    tipoMap[(a.nombre||"").toUpperCase()]=t;
+  });
+  // Debug: verificar cuántos vehículos tienen analista asignado y tipo detectado
+  const sinTipo=seg.filter(v=>!tipoMap[(v.analista||"").toUpperCase()]);
+  if(sinTipo.length>0)console.warn("Vehículos sin tipo detectado:",sinTipo.map(v=>v.p+"="+v.analista));
+  const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
+  const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
+  const elUrb=document.getElementById("kpi-flota-urbanos");
+  const elNac=document.getElementById("kpi-flota-nacional");
+  // Si no hay separación (ANALISTAS_DATA sin tipo), mostrar todos en urbanos
+  const hayTipos=segUrb.length>0||segNac.length>0;
+  if(elUrb) elUrb.innerHTML=hayTipos?(segUrb.length>0?buildKpiFlota(segUrb):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>'):buildKpiFlota(seg);
+  if(elNac) elNac.innerHTML=hayTipos?(segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>'):'<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
+
+
+  // Resto del render (tabla, panel derecho) usa datos totales
+  const act=seg.filter(v=>v.estado!=="PARO"),oos=seg.filter(v=>v.estado==="PARO");
+  const tMeta=seg.reduce((s,v)=>s+v.meta,0),tReal=seg.reduce((s,v)=>s+v.real,0);
+  const pctOp=seg.length>0?Math.round((act.length/seg.length)*100):0;
   const sorted=[...seg].sort((a,b)=>(b.meta>0?b.real/b.meta:0)-(a.meta>0?a.real/a.meta:0));
   const tb=document.getElementById("fleet-tbody");if(tb){tb.innerHTML="";
     sorted.forEach(v=>{
@@ -703,7 +791,348 @@ function renderFlota(seg){
   }
 }
 
-// ── RENDER CLIENTES ──
+// ── GRÁFICA DE LÍNEAS: rendimiento por tanqueo por placa ──
+let chartCombLineas = null;
+let placasFiltradas = new Set();
+
+const COMB_COLORES = [
+  '#4A9EFF','#1FC876','#E8A020','#9B6FFF','#E84040',
+  '#00D4FF','#FF6B6B','#A8FF78','#FFA07A','#87CEEB',
+  '#DDA0DD','#98FB98','#F0E68C','#B0C4DE','#FFDAB9',
+  '#C0C0C0','#FFB347','#66CDAA','#FF69B4','#7FFFD4',
+  '#DC143C','#20B2AA'
+];
+
+function buildLineChart(filas) {
+  const canvas = document.getElementById('chart-comb-lineas');
+  if (!canvas) return;
+
+  // Agrupar eventos por placa, en orden de llegada (cada fila = un tanqueo)
+  const eventosPorPlaca = {};
+  filas.forEach(r => {
+    const placa = (r['PLACA'] || '').trim().toUpperCase();
+    if (!placa) return;
+    const kmRec = parseFloat((r['KM RECORRIDOS'] || '0').replace(/,/g, '.')) || 0;
+    const gal   = parseFloat((r['GALONES'] || '0').replace(/,/g, '.')) || 0;
+    if (kmRec <= 0 || gal <= 0) return;
+    if (!eventosPorPlaca[placa]) eventosPorPlaca[placa] = [];
+    eventosPorPlaca[placa].push({ rend: kmRec / gal });
+  });
+
+  const placasDisponibles = Object.keys(eventosPorPlaca).sort();
+  if (placasFiltradas.size === 0) placasDisponibles.forEach(p => placasFiltradas.add(p));
+
+  // Botones de filtro por placa
+  const filtroEl = document.getElementById('comb-placa-filtros');
+  if (filtroEl) {
+    filtroEl.innerHTML = placasDisponibles.map((p, i) => {
+      const activa = placasFiltradas.has(p);
+      const col = COMB_COLORES[i % COMB_COLORES.length];
+      return `<button onclick="togglePlacaComb('${p}')"
+        style="font-family:DM Mono;font-size:9px;font-weight:600;letter-spacing:.5px;
+               padding:3px 8px;cursor:pointer;border:1px solid ${col};
+               background:${activa ? col : 'transparent'};
+               color:${activa ? '#000' : col};transition:all .2s;">${p}</button>`;
+    }).join('');
+  }
+
+  // Número máximo de tanqueos entre placas activas
+  let maxEv = 0;
+  placasDisponibles.forEach(p => {
+    if (placasFiltradas.has(p)) maxEv = Math.max(maxEv, eventosPorPlaca[p].length);
+  });
+  const labels = Array.from({ length: maxEv }, (_, i) => `Tanqueo ${i + 1}`);
+
+  // Dataset por cada placa activa + su línea de referencia punteada
+  const datasets = [];
+  placasDisponibles.forEach((p, i) => {
+    if (!placasFiltradas.has(p)) return;
+    const col = COMB_COLORES[i % COMB_COLORES.length];
+    const ref = (REND_REF[p] || { urb: 7 }).urb;
+    const evs = eventosPorPlaca[p];
+    // Línea de rendimiento real
+    datasets.push({
+      label: p,
+      data: evs.map(e => parseFloat(e.rend.toFixed(2))),
+      borderColor: col,
+      backgroundColor: col,
+      borderWidth: 2,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      pointBackgroundColor: evs.map(e => e.rend >= ref ? '#1FC876' : '#E84040'),
+      pointBorderColor: evs.map(e => e.rend >= ref ? '#0D6E40' : '#7A1010'),
+      pointBorderWidth: 1.5,
+      fill: false,
+    });
+    // Línea de referencia horizontal (punteada)
+    datasets.push({
+      label: `_ref_${p}`,
+      data: Array(maxEv).fill(ref),
+      borderColor: col,
+      borderDash: [5, 4],
+      borderWidth: 1,
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+    });
+  });
+
+  if (chartCombLineas) { chartCombLineas.destroy(); chartCombLineas = null; }
+
+  chartCombLineas = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            filter: item => !item.text.startsWith('_ref_'),
+            color: '#DDE1EC',
+            font: { size: 10, family: 'DM Mono' },
+            boxWidth: 12,
+          }
+        },
+        tooltip: {
+          filter: item => !item.dataset.label.startsWith('_ref_'),
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.label.startsWith('_ref_')) return null;
+              const placa = ctx.dataset.label;
+              const ref = (REND_REF[placa] || { urb: 7 }).urb;
+              const val = ctx.parsed.y;
+              return ` ${placa}: ${val.toFixed(2)} km/gal ${val >= ref ? '✅' : '🔴'} (ref ${ref})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#7A8299', font: { size: 9 }, maxRotation: 0 }, grid: { color: 'rgba(31,35,48,.6)' } },
+        y: {
+          beginAtZero: false,
+          title: { display: true, text: 'km / galón', color: '#7A8299', font: { size: 10 } },
+          ticks: { color: '#7A8299', font: { size: 10 } },
+          grid: { color: 'rgba(31,35,48,.6)' }
+        }
+      }
+    }
+  });
+}
+
+function togglePlacaComb(placa) {
+  if (placasFiltradas.has(placa)) {
+    if (placasFiltradas.size === 1) return;
+    placasFiltradas.delete(placa);
+  } else {
+    placasFiltradas.add(placa);
+  }
+  if (COMB_DATA && COMB_DATA.length) buildLineChart(COMB_DATA);
+}
+
+// ── COMBUSTIBLE ──
+// Referencias de rendimiento por placa (km/galón), definidas por Eduardo
+const REND_REF={
+  KMY697:{urb:10,vje:12}, KUK799:{urb:7,vje:9},  LKL235:{urb:10,vje:12},
+  OFJ829:{urb:8,vje:null}, SKG303:{urb:6,vje:8},  SNY134:{urb:7,vje:9},
+  SOD825:{urb:6,vje:8},   SPO695:{urb:6,vje:8},   SUB048:{urb:6.5,vje:null},
+  SZK111:{urb:7,vje:9},   SZK527:{urb:7,vje:null}, TNB623:{urb:6,vje:null},
+  TRL124:{urb:6,vje:8},   TRL285:{urb:6,vje:8},   UFJ924:{urb:6.5,vje:null},
+  USC149:{urb:8,vje:10},  UYT639:{urb:7,vje:9},   WDC624:{urb:8,vje:10},
+  WLB640:{urb:7,vje:9},   WPQ779:{urb:9,vje:11},  WPQ787:{urb:9,vje:11},
+  ZOC936:{urb:8,vje:null}
+};
+
+// Variables globales de combustible
+let COMB_DATA=[];   // filas crudas de la hoja COMBUSTIBLE
+let COMB_RES=[];    // filas del RESUMEN COMBUSTIBLE (una por placa)
+
+// Procesar filas brutas de la hoja COMBUSTIBLE para obtener stats por placa
+function procesarCombustible(filas){
+  // filas viene con encabezados: FECHA, PLACA, CONDUCTOR, CLIENTE,
+  // KM INICIAL, KM FINAL, KM RECORRIDOS, GALONES, VALOR TANQUEO ($), REND. KM/GAL, TIPO RUTA, OBSERVACIONES
+  const map={};
+  filas.forEach(r=>{
+    const placa=(r['PLACA']||'').trim().toUpperCase();
+    if(!placa)return;
+    const kmRec=parseFloat((r['KM RECORRIDOS']||'0').replace(/,/g,'.'))||0;
+    const gal=parseFloat((r['GALONES']||'0').replace(/,/g,'.'))||0;
+    const valor=parseFloat((r['VALOR TANQUEO ($)']||r['VALOR TANQUEO']||'0').replace(/[$,.]/g,m=>m===','?'.':''))||0;
+    const tipo=(r['TIPO RUTA']||'').trim().toUpperCase(); // URBANO o VIAJE
+    const conductor=(r['CONDUCTOR']||'').trim();
+    const cliente=(r['CLIENTE']||'').trim();
+    const fecha=(r['FECHA']||'').trim();
+
+    if(!map[placa])map[placa]={placa,conductor,km:0,gal:0,valor:0,eventos:0};
+    if(kmRec>0&&gal>0){
+      map[placa].km+=kmRec;
+      map[placa].gal+=gal;
+      map[placa].valor+=valor;
+      map[placa].eventos++;
+    }
+  });
+  // Calcular rendimiento real y estado semáforo vs referencia urbana
+  return Object.values(map).map(d=>{
+    const ref=REND_REF[d.placa]||{urb:7,vje:null};
+    const rend=d.gal>0?d.km/d.gal:0;
+    const pct=ref.urb>0?rend/ref.urb:1;
+    const estado=pct>=0.95?'verde':pct>=0.80?'amarillo':'rojo';
+    return{...d,rend,ref:ref.urb,refVje:ref.vje,pct,estado,soloUrb:!ref.vje};
+  }).sort((a,b)=>a.rend-b.rend); // ordenar de menor a mayor rendimiento (los peores primero)
+}
+
+// Procesar viajes nacionales (TIPO RUTA = VIAJE) agrupados por cliente
+function procesarViajesNac(filas){
+  const map={};
+  filas.forEach(r=>{
+    const tipo=(r['TIPO RUTA']||'').trim().toUpperCase();
+    if(tipo!=='VIAJE')return;
+    const cliente=(r['CLIENTE']||'').trim();
+    if(!cliente)return;
+    const placa=(r['PLACA']||'').trim().toUpperCase();
+    const kmRec=parseFloat((r['KM RECORRIDOS']||'0').replace(/,/g,'.'))||0;
+    const gal=parseFloat((r['GALONES']||'0').replace(/,/g,'.'))||0;
+    const valor=parseFloat((r['VALOR TANQUEO ($)']||r['VALOR TANQUEO']||'0').replace(/[$,.]/g,m=>m===','?'.':''))||0;
+    if(!map[cliente])map[cliente]={cliente,viajes:0,km:0,gal:0,valor:0,placas:new Set()};
+    map[cliente].viajes++;
+    map[cliente].km+=kmRec;
+    map[cliente].gal+=gal;
+    map[cliente].valor+=valor;
+    map[cliente].placas.add(placa);
+  });
+  return Object.values(map)
+    .map(d=>({...d,rend:d.gal>0?d.km/d.gal:0,placas:[...d.placas]}))
+    .sort((a,b)=>b.viajes-a.viajes);
+}
+
+// Color según estado de rendimiento
+function colComb(estado){
+  return estado==='verde'?'var(--green)':estado==='amarillo'?'var(--yellow)':'var(--red)';
+}
+
+// Renderizar el módulo de combustible completo en la pestaña Flota
+function renderCombustible(filas){
+  if(!filas||!filas.length){
+    const badge=document.getElementById('comb-estado-badge');
+    if(badge)badge.textContent='Sin datos de combustible';
+    const kpi=document.getElementById('kpi-comb');
+    if(kpi)kpi.innerHTML='<div class="kpi cb" style="grid-column:span 5"><div class="kpi-label">Sin datos</div><div class="kpi-val" style="font-size:16px;font-family:DM Sans">Registra tanqueos en la hoja COMBUSTIBLE del Sheet</div></div>';
+    return;
+  }
+
+  const datos=procesarCombustible(filas);
+  const viajes=procesarViajesNac(filas);
+
+  // ── KPIs globales de flota ──
+  const totalKm=datos.reduce((s,d)=>s+d.km,0);
+  const totalGal=datos.reduce((s,d)=>s+d.gal,0);
+  const totalValor=datos.reduce((s,d)=>s+d.valor,0);
+  const rendFlota=totalGal>0?totalKm/totalGal:0;
+  const enRojo=datos.filter(d=>d.estado==='rojo').length;
+  const enVerde=datos.filter(d=>d.estado==='verde').length;
+
+  const badge=document.getElementById('comb-estado-badge');
+  if(badge)badge.textContent=`${datos.length} vehículos · ${enRojo} en alerta`;
+
+  const kpi=document.getElementById('kpi-comb');
+  if(kpi)kpi.innerHTML=`
+    <div class="kpi cg"><div class="kpi-label">Km recorridos</div><div class="kpi-val" style="font-size:26px">${Math.round(totalKm).toLocaleString('es-CO')}</div><div class="kpi-sub">acumulado mes</div></div>
+    <div class="kpi cy"><div class="kpi-label">Galones consumidos</div><div class="kpi-val" style="font-size:26px">${Math.round(totalGal).toLocaleString('es-CO')}</div><div class="kpi-sub">acumulado mes</div></div>
+    <div class="kpi cb"><div class="kpi-label">Rend. flota</div><div class="kpi-val" style="font-size:26px">${rendFlota.toFixed(2)}</div><div class="kpi-sub">km / galón prom. ponderado</div></div>
+    <div class="kpi cr"><div class="kpi-label">Vehículos en alerta</div><div class="kpi-val" style="font-size:26px">${enRojo}</div><div class="kpi-sub">rendimiento &lt; 80% de ref.</div></div>
+    <div class="kpi cp"><div class="kpi-label">En verde</div><div class="kpi-val" style="font-size:26px">${enVerde}</div><div class="kpi-sub">dentro del rango esperado</div></div>`;
+
+  // ── Tabla por vehículo ──
+  const tbody=document.getElementById('comb-tbody');
+  if(tbody){
+    tbody.innerHTML=datos.map(d=>{
+      const rendStr=d.rend>0?d.rend.toFixed(2):'—';
+      const pctBar=Math.min(Math.round(d.pct*100),100);
+      const col=colComb(d.estado);
+      const chipTxt=d.estado==='verde'?'Verde':d.estado==='amarillo'?'Atención':'Alerta';
+      const chipC=d.estado==='verde'?'g':d.estado==='amarillo'?'y':'r';
+      return`<tr>
+        <td class="plate">${d.placa}</td>
+        <td style="font-size:11px;color:var(--muted2);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.conductor}</td>
+        <td class="num">${Math.round(d.km).toLocaleString('es-CO')}</td>
+        <td class="num">${d.gal.toFixed(1)}</td>
+        <td class="num" style="color:${col};font-weight:600">${rendStr}</td>
+        <td class="num" style="color:var(--muted2)">${d.ref.toFixed(1)}</td>
+        <td><span class="chip ${chipC}">${chipTxt}</span>
+          <div style="margin-top:3px;height:3px;background:var(--border2);width:60px;display:inline-block;vertical-align:middle;margin-left:4px">
+            <div style="height:100%;width:${pctBar}%;background:${col}"></div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Semáforo de combustible ──
+  const enAm=datos.filter(d=>d.estado==='amarillo').length;
+  const sw=document.getElementById('comb-semaforo');
+  if(sw)sw.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(31,200,118,.06);border:1px solid rgba(31,200,118,.15)">
+      <span style="font-size:11px">🟢 Verde (≥95% de ref.)</span>
+      <span style="font-family:DM Mono;font-size:13px;color:var(--green)">${enVerde} vehículos</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(232,160,32,.06);border:1px solid rgba(232,160,32,.15)">
+      <span style="font-size:11px">🟡 Atención (80–94%)</span>
+      <span style="font-family:DM Mono;font-size:13px;color:var(--yellow)">${enAm} vehículos</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(232,64,64,.06);border:1px solid rgba(232,64,64,.15)">
+      <span style="font-size:11px">🔴 Alerta (&lt;80% de ref.)</span>
+      <span style="font-family:DM Mono;font-size:13px;color:var(--red)">${enRojo} vehículos</span>
+    </div>
+    <div style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border);margin-top:2px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px">Rendimiento prom. flota</div>
+      <div style="font-family:Bebas Neue;font-size:28px;color:var(--green)">${rendFlota.toFixed(2)} km/gal</div>
+      <div style="font-size:10px;color:var(--muted)">Total: ${Math.round(totalKm).toLocaleString('es-CO')} km · ${Math.round(totalGal).toLocaleString('es-CO')} gal</div>
+    </div>
+  </div>`;
+
+  // ── Viajes nacionales por cliente ──
+  const vw=document.getElementById('viajes-nac-wrap');
+  if(vw){
+    if(!viajes.length){
+      vw.innerHTML='<div style="font-size:11px;color:var(--muted);padding:10px 0;text-align:center">Sin viajes nacionales registrados este mes</div>';
+    } else {
+      // Tabla agrupada por cliente
+      vw.innerHTML=`
+        <table class="ftbl">
+          <thead><tr>
+            <th>Cliente</th>
+            <th class="r">Viajes</th>
+            <th class="r">Km</th>
+            <th class="r">Galones</th>
+            <th class="r">Rend.</th>
+            <th style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:500">Placas</th>
+          </tr></thead>
+          <tbody>${viajes.map(v=>{
+            const rendC=v.rend>0?v.rend.toFixed(2):'—';
+            // Semáforo de rendimiento: comparar contra ref de viaje de las placas involucradas
+            // Como es multi-placa, usamos 8 km/gal como referencia base para viaje
+            const semV=v.rend>=8?'var(--green)':v.rend>=6?'var(--yellow)':'var(--red)';
+            return`<tr>
+              <td style="font-size:12px;font-weight:500">${v.cliente}</td>
+              <td class="num">${v.viajes}</td>
+              <td class="num">${Math.round(v.km).toLocaleString('es-CO')}</td>
+              <td class="num">${v.gal.toFixed(1)}</td>
+              <td class="num" style="color:${semV};font-weight:600">${rendC}</td>
+              <td style="font-size:9px;color:var(--muted2);font-family:DM Mono">${v.placas.join(', ')}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+        <div style="margin-top:10px;font-size:9px;color:var(--muted2);text-align:right">${viajes.reduce((s,v)=>s+v.viajes,0)} viajes nacionales · ${viajes.length} clientes</div>`;
+    }
+  }
+  // ── Gráfica de líneas: rendimiento por tanqueo ──
+  setTimeout(() => buildLineChart(filas), 100);
+}
+
 function renderClientes(clientes){
   const el=document.getElementById("kpi-clientes");if(!el)return;
   if(!clientes||!clientes.length){
@@ -723,18 +1152,16 @@ function renderClientes(clientes){
 
   function kpiBloque(lista, titulo, color){
     if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
-    const tF=lista.reduce((s,c)=>s+c.facturado,0);
-    const tO=lista.reduce((s,c)=>s+c.ops,0);
-    const cliUnicos=[...new Set(lista.map(c=>c.nombre))].length;
+    const tF=lista.reduce((s,c)=>s+c.facturado,0),tO=lista.reduce((s,c)=>s+c.ops,0);
     const top=[...lista].sort((a,b)=>b.facturado-a.facturado)[0];
-    return `<div style="border:1px solid var(--border);padding:14px 18px;margin-bottom:12px;">
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
+    return `<div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:10px;">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:10px;display:flex;align-items:center;gap:7px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+      <div class="kpi-strip">
         <div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Acumulado mes</div></div>
-        <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${cliUnicos}</div><div class="kpi-sub">Con operación</div></div>
-        <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val" style="font-size:14px">${fmt(top?.facturado||0)}</div><div class="kpi-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${top?.nombre||"—"}</div></div>
+        <div class="kpi cb"><div class="kpi-label">Clientes Activos</div><div class="kpi-val">${[...new Set(lista.map(c=>c.nombre))].length}</div><div class="kpi-sub">Con operación</div></div>
+        <div class="kpi cy"><div class="kpi-label">Top Cliente</div><div class="kpi-val">${fmt(top?.facturado||0)}</div><div class="kpi-sub">${top?.nombre||"—"}</div></div>
         <div class="kpi cr"><div class="kpi-label">Total Operaciones</div><div class="kpi-val">${tO}</div><div class="kpi-sub">En el periodo</div></div>
         <div class="kpi cp"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${tO>0?fmt(Math.round(tF/tO)):"—"}</div><div class="kpi-sub">Por operación</div></div>
       </div>
@@ -744,17 +1171,15 @@ function renderClientes(clientes){
   const hayTipos=cliUrb.length>0||cliNac.length>0;
   el.innerHTML=hayTipos
     ? kpiBloque(cliUrb,"Operación Urbana","var(--blue)")+kpiBloque(cliNac,"Operación Nacional","var(--accent)")
-    : kpiBloque(clientes,"Todos","var(--purple)");
+    : `<div class="kpi cg"><div class="kpi-label">Total Facturado</div><div class="kpi-val">${fmt(clientes.reduce((s,c)=>s+c.facturado,0))}</div><div class="kpi-sub">Acumulado mes</div></div>`;
 
-  // Tabla unificada por nombre de cliente con Urbano/Nacional
+  // Tabla unificada por nombre de cliente
   const mapaUnif={};
   clientes.forEach(c=>{
     const key=c.nombre.trim();
-    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,facUrb:0,facNac:0,analistas:new Set()};
+    if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,analistas:new Set()};
     mapaUnif[key].ops+=c.ops;
     mapaUnif[key].facturado+=c.facturado;
-    mapaUnif[key].facUrb+=(c.facUrb||0);
-    mapaUnif[key].facNac+=(c.facNac||0);
     if(c.analista) mapaUnif[key].analistas.add(c.analista.split(" ")[0]);
   });
   const sorted=Object.values(mapaUnif).sort((a,b)=>b.facturado-a.facturado);
@@ -762,15 +1187,7 @@ function renderClientes(clientes){
   const tb=document.getElementById("client-tbody");if(tb){tb.innerHTML="";
     sorted.forEach(c=>{
       const pct=Math.round((c.facturado/mx)*100);
-      tb.innerHTML+=`<tr>
-        <td style="font-size:12px;font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
-        <td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(" / ")}</td>
-        <td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td>
-        <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td>
-        <td class="num" style="color:var(--blue)">${c.facUrb>0?fmt(c.facUrb):"—"}</td>
-        <td class="num" style="color:var(--accent)">${c.facNac>0?fmt(c.facNac):"—"}</td>
-        <td class="num">${fmt(c.facturado)}</td>
-      </tr>`;
+      tb.innerHTML+=`<tr><td style="font-size:12px;font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td><td style="font-size:11px;color:var(--muted2)">${[...c.analistas].join(" / ")}</td><td style="font-family:DM Mono;font-size:11px;text-align:center;color:var(--muted2)">${c.ops}</td><td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${pct}" style="background:var(--blue);width:0%"></div></div></td><td class="num">${fmt(c.facturado)}</td></tr>`;
     });
   }
   // Torta
@@ -808,66 +1225,9 @@ function renderClientes(clientes){
   document.getElementById("torta-legend").innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
     return`<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:DM Mono;font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:DM Mono;font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
   }).join("");
-
-  // ── TABLA URBANO vs NACIONAL POR CLIENTE ──
-  const tabUrNac=document.getElementById("tabla-urb-nac");
-  if(tabUrNac){
-    // Filtrar TOTAL_FILAS por mes
-    const mesNombreActual=(MES_CLI||"").toUpperCase();
-    const mesNumActual=MESES.findIndex(m=>m.toUpperCase()===mesNombreActual)+1||0;
-    const filasFiltradas=TOTAL_FILAS.filter(r=>{
-      if(mesNumActual>0){
-        const f=parseFecha(r["FECHA"]||"");
-        if(f&&f.getMonth()+1!==mesNumActual) return false;
-      }
-      return true;
-    });
-    const mapUN={};
-    filasFiltradas.forEach(r=>{
-      const cli=(r["CLIENTE"]||"").trim();if(!cli)return;
-      const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-      const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-      const cobroRaw=r["COBRO REMESA"]||r["COBRO"]||"0";
-      const cobro=pMoney(cobroRaw)*1000;
-      const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
-      if(!mapUN[cli]) mapUN[cli]={nombre:cli,urb:0,nac:0};
-      if(esUrbano) mapUN[cli].urb+=cobro;
-      else mapUN[cli].nac+=cobro;
-    });
-    const rowsUN=Object.values(mapUN).filter(c=>c.urb>0||c.nac>0).sort((a,b)=>(b.urb+b.nac)-(a.urb+a.nac));
-    tabUrNac.innerHTML=rowsUN.map(c=>`<tr>
-      <td style="font-size:12px;font-weight:500;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
-      <td class="num" style="color:var(--blue)">${c.urb>0?fmt(c.urb):"—"}</td>
-      <td class="num" style="color:var(--accent)">${c.nac>0?fmt(c.nac):"—"}</td>
-      <td class="num">${fmt(c.urb+c.nac)}</td>
-    </tr>`).join("");
-  }
 }
 
 // ── RENDER ANALISTAS ──
-function kpiStrip(grupo,titulo,color){
-  if(!grupo||!grupo.length) return `<div style="font-size:11px;color:var(--muted2);padding:10px 0">Sin analistas ${titulo}</div>`;
-  const sorted=[...grupo].sort((a,b)=>b.p-a.p);
-  const mejor=sorted[0];
-  const prom=Math.round(grupo.reduce((s,a)=>s+a.p,0)/grupo.length);
-  const enV=grupo.filter(a=>a.p>=90).length;
-  const enR=grupo.filter(a=>a.p<70).length;
-  const tF=grupo.reduce((s,a)=>s+a.tR,0);
-  const tM=grupo.reduce((s,a)=>s+a.meta,0);
-  return `<div style="border:1px solid var(--border);padding:14px 18px;margin-bottom:12px;">
-    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${color};margin-bottom:12px;display:flex;align-items:center;gap:7px;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;"></span>${titulo}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-      <div class="kpi cg"><div class="kpi-label">Mejor Analista</div><div style="font-family:'DM Sans';font-size:13px;font-weight:600;margin-top:4px;line-height:1.2">${mejor?mejor.nombre:"—"}</div><div class="kpi-sub">${mejor?mejor.p+"%":""}</div></div>
-      <div class="kpi cy"><div class="kpi-label">Promedio</div><div class="kpi-val">${prom}%</div><div class="kpi-sub">${grupo.length} analistas</div></div>
-      <div class="kpi cb"><div class="kpi-label">Facturación</div><div class="kpi-val">${fmt(tF)}</div><div class="kpi-sub">Meta: ${fmt(tM)}</div></div>
-      <div class="kpi cg"><div class="kpi-label">En Verde</div><div class="kpi-val tg">${enV}</div><div class="kpi-sub">≥ 90%</div></div>
-      <div class="kpi cr"><div class="kpi-label">En Rojo</div><div class="kpi-val tr">${enR}</div><div class="kpi-sub">< 70%</div></div>
-    </div>
-  </div>`;
-}
-
 function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
   if(!analistas||!analistas.length){el.innerHTML="";return;}
@@ -886,7 +1246,7 @@ function renderAnalistas(clientes,analistas){
   const gruposKpi=hayTipos?[{lista:urbanos,titulo:"Urbanos",color:"var(--blue)"},{lista:nacional,titulo:"Nacional",color:"var(--accent)"}]:[{lista:data,titulo:"Todos",color:"var(--purple)"}];
 
   // KPI bloques
-  el.innerHTML=gruposKpi.map(g=>kpiStrip(g.lista,g.titulo,g.color)).join("");
+  el.innerHTML=`<div style="display:grid;grid-template-columns:${gruposKpi.length>1?"1fr 1fr":"1fr"};gap:10px;">`+gruposKpi.map(g=>kpiStrip(g.lista,g.titulo,g.color)).join("")+"</div>";
 
   // Barras META VS REAL — separadas por tipo
   const barsEl=document.getElementById("analyst-bars");
