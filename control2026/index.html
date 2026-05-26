@@ -434,31 +434,27 @@ function parseCSV(text, tabName, month, year) {
     return;
   }
 
-  const headers = parseCSVLine(lines[headerIdx]).map(h => h.trim().toUpperCase().replace(/"/g,'').replace(/\u00c3\u00b3/g,'O').replace(/\u00d3/g,'O').replace(/\u00f3/g,'O'));
-  const col = name => headers.indexOf(name.toUpperCase());
+  const headers = parseCSVLine(lines[headerIdx]).map(h => h.trim().toUpperCase().replace(/"/g,''));
+  const col = name => headers.findIndex(h => h.includes(name.toUpperCase()));
 
-  // DEBUG — ver encabezados en consola
-  console.log('HEADERS:', headers);
-  console.log('HEADER LINE RAW:', lines[headerIdx]);
-
-  // Mapeo de columnas — nombres exactos del Sheet
+  // Mapeo por nombre con búsqueda parcial (tolerante a truncamiento del CSV)
   const iCLI   = col('CLIENTE');
   const iSCG   = col('SITIO DE CARGUE');
   const iSDS   = col('SITIO DESCARGUE');
   const iTOP   = col('TIPO OPERACION');
   const iTFL   = col('TIPO DE FLOTA');
-  const iFCA   = findCol(headers, ['FECHA DE CARG','FECHA DE CARGUE','FECHA CARGUE']);
+  const iFCA   = col('FECHA DE CARG');
   const iPLA   = col('PLACA');
   const iCON   = col('CONDUCTOR');
-  const iFACT  = findCol(headers, ['V / F - FACTURAR','V/F - FACTURAR','V / F - FACT']);
-  const iPAG   = findCol(headers, ['V / F - PAGAR','V/F - PAGAR']);
-  const iING   = findCol(headers, ['INGRESO']);
-  const iINTER = findCol(headers, ['INTERMEDIACION','INTERMEDIACI\u00d3N','INTERMEDIACI\u00f3N']);
-  const iFFACT = findCol(headers, ['FECHA FACTURA']);
-  const iFPAG  = findCol(headers, ['PAGO FACTURA','FECHA PAGO']);
-  const iFCUM  = findCol(headers, ['FECHA DE CUMPLIDO','FECHA CUMPLIDO']);
+  const iFACT  = col('FACTURAR');
+  const iPAG   = col('PAGAR');
+  const iING   = col('INGRESO');
+  const iINTER = col('INTERMEDIACION');
+  const iFFACT = col('FECHA FACTURA');
+  const iFPAG  = col('PAGO FACTURA');
+  const iFCUM  = col('FECHA DE CUMPLIDO');
 
-  // Mostrar mapeo en status para debug
+  console.log('HEADERS:', headers);
   console.log('MAPEO: CLI='+iCLI+' TOP='+iTOP+' TFL='+iTFL+' FCA='+iFCA+' FACT='+iFACT+' ING='+iING+' INTER='+iINTER+' FFACT='+iFFACT+' FPAG='+iFPAG+' FCUM='+iFCUM);
 
   const rows = [];
