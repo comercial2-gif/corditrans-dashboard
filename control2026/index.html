@@ -363,6 +363,11 @@ function buildMonthSelector() {
   const tabs = SHEET_TABS[CURRENT_YEAR] || {};
   const keys = Object.keys(tabs).sort();
   sel.innerHTML = '';
+  // Opción "Todos los meses"
+  const all = document.createElement('option');
+  all.value = 'ALL';
+  all.textContent = 'Todos los meses';
+  sel.appendChild(all);
   keys.forEach(k => {
     const o = document.createElement('option');
     o.value = k;
@@ -389,6 +394,30 @@ async function loadSheet() {
   CURRENT_YEAR = year;
   CURRENT_MONTH = month;
 
+  if (month === 'ALL') {
+    // Cargar todos los meses del año
+    const tabs = SHEET_TABS[year] || {};
+    const keys = Object.keys(tabs).sort();
+    if (!keys.length) { setStatus('err', '✗ Sin meses disponibles'); return; }
+    setStatus('loading', '⏳ Cargando todos los meses de ' + year + '...');
+    showPB(true);
+    let allRows = [];
+    for (const k of keys) {
+      const tabName = tabs[k];
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}&t=${Date.now()}`;
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) continue;
+        const text = await resp.text();
+        const rows = parseCSVtoRows(text, tabName, k, year);
+        allRows = allRows.concat(rows);
+      } catch(e) { console.warn('Error cargando ' + tabName, e); }
+    }
+    if (!allRows.length) { setStatus('err', '✗ Sin datos'); showPB(false); return; }
+    finalizeRows(allRows, 'Todos los meses · ' + year, 'ALL', year);
+    return;
+  }
+
   const tabName = (SHEET_TABS[year] || {})[month];
   if (!tabName) {
     setStatus('err', '✗ Pestaña no encontrada para ' + year + '/' + month);
@@ -398,8 +427,7 @@ async function loadSheet() {
   setStatus('loading', '⏳ Cargando ' + MES_NAMES[month] + ' ' + year + '...');
   showPB(true);
 
-  // Google Sheets CSV export URL (hoja pública)
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}&t=${Date.now()}`;
 
   try {
     const resp = await fetch(url);
@@ -412,7 +440,7 @@ async function loadSheet() {
   }
 }
 
-function parseCSV(text, tabName, month, year) {
+function parseCSVtoRows(text, tabName, month, year) {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length < 2) {
     setStatus('err', '✗ Sin datos en la hoja');
@@ -501,27 +529,29 @@ function parseCSV(text, tabName, month, year) {
     });
   }
 
-  if (!rows.length) {
+  return rows;
+}
+
+function parseCSV(text, tabName, month, year) {
+  const rows = parseCSVtoRows(text, tabName, month, year);
+  if (!rows || !rows.length) {
     setStatus('warn', '⚠ Sin filas válidas en ' + tabName);
     showPB(false);
     return;
   }
+  const label = (month === 'ALL' ? 'Todos los meses' : MES_NAMES[month]) + ' ' + year;
+  finalizeRows(rows, label, month, year);
+}
 
+function finalizeRows(rows, label, month, year) {
   ALL_ROWS = rows;
-
-  // Build filter arrays
   CLIENTES = [...new Set(rows.map(r=>r.cliente))].filter(Boolean).sort();
   TIPO_OPS = [...new Set(rows.map(r=>r.tipoOp))].filter(Boolean).sort();
   TIPO_FLS = [...new Set(rows.map(r=>r.tipoFl))].filter(Boolean).sort();
-
-  // Rebuild dropdowns
   rebuildDropdown('f-cli', CLIENTES, 'Todos los clientes');
   rebuildDropdown('f-op',  TIPO_OPS, 'Todas');
   rebuildDropdown('f-fl',  TIPO_FLS, 'Todas');
-
   resetFilters();
-
-  const label = MES_NAMES[month] + ' ' + year;
   setStatus('ok', `✓ ${rows.length.toLocaleString('es-CO')} viajes · ${label}`);
   document.getElementById('footer-info').textContent = label + ' · ' + rows.length.toLocaleString('es-CO') + ' viajes';
   document.getElementById('header-sub').textContent = label + ' · Facturación · Intermediación · Tiempos · Rutas · Operación · Flota';
