@@ -310,7 +310,7 @@ footer{margin:18px 28px 12px;padding-top:12px;border-top:1px solid var(--bdr);fo
 // ══════════════════════════════════════════════
 // SHEET CONFIG
 // ══════════════════════════════════════════════
-const SHEET_ID = '1WPMdC_2Ve1AxymZ1b_N9xbur2GUwbIfF';
+const SHEET_ID = '1X6T7rgbdZtY3UPM-5CE0GnlbOWy8jsJqqbczmYUbr40';
 
 // Nombres exactos de las pestañas por año/mes
 const SHEET_TABS = {
@@ -437,7 +437,7 @@ function parseCSV(text, tabName, month, year) {
   const headers = parseCSVLine(lines[headerIdx]).map(h => h.trim().toUpperCase().replace(/"/g,''));
   const col = name => headers.findIndex(h => h.includes(name.toUpperCase()));
 
-  // Mapeo por nombre con búsqueda parcial (tolerante a truncamiento del CSV)
+  // Mapeo por nombre con búsqueda parcial
   const iCLI   = col('CLIENTE');
   const iSCG   = col('SITIO DE CARGUE');
   const iSDS   = col('SITIO DESCARGUE');
@@ -447,7 +447,7 @@ function parseCSV(text, tabName, month, year) {
   const iPLA   = col('PLACA');
   const iCON   = col('CONDUCTOR');
   const iFACT  = col('FACTURAR');
-  const iPAG   = col('PAGAR');
+  const iPAG   = col('V / F - PAGAR');
   const iING   = col('INGRESO');
   const iINTER = col('INTERMEDIACION');
   const iFFACT = col('FECHA FACTURA');
