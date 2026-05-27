@@ -803,27 +803,34 @@ function buildKpiFlota(grupo){
 }
 
 function renderFlota(seg){
-  // Separar vehículos por tipo usando ANALISTAS_DATA
+  // Normalizar nombre para comparación robusta (sin importar mayúsculas ni espacios extra)
+  const norm = s => (s||"").toUpperCase().trim().replace(/\s+/g," ");
+
+  // Construir mapa analista → tipo usando ANALISTAS_DATA
   const tipoMap={};
   (ANALISTAS_DATA||[]).forEach(a=>{
-    const t=(a.tipo||"").toUpperCase();
-    tipoMap[(a.nombre||"").toUpperCase()]=t;
+    const key = norm(a.nombre);
+    const tipo = norm(a.tipo||"");
+    if(key) tipoMap[key] = tipo;
   });
-  // Debug: verificar cuántos vehículos tienen analista asignado y tipo detectado
-  const sinTipo=seg.filter(v=>!tipoMap[(v.analista||"").toUpperCase()]);
-  if(sinTipo.length>0)console.warn("Vehículos sin tipo detectado:",sinTipo.map(v=>v.p+"="+v.analista));
-  const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
-  const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
-  const elUrb=document.getElementById("kpi-flota-urbanos");
-  const elNac=document.getElementById("kpi-flota-nacional");
-  // Si no hay separación (ANALISTAS_DATA sin tipo), mostrar todos en urbanos
-  // Si no hay separación por tipo, mostrar todos en Urbano y mensaje en Nacional
+
+  const segUrb = seg.filter(v => tipoMap[norm(v.analista)] === "URBANOS");
+  const segNac = seg.filter(v => tipoMap[norm(v.analista)] === "NACIONAL");
   const hayTipos = segUrb.length > 0 || segNac.length > 0;
-  if (elUrb) elUrb.innerHTML = hayTipos
-    ? (segUrb.length > 0 ? buildKpiFlota(segUrb) : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>')
-    : buildKpiFlota(seg); // fallback: mostrar todos si no hay clasificación
-  if (elNac) elNac.innerHTML = hayTipos
-    ? (segNac.length > 0 ? buildKpiFlota(segNac) : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>')
+
+  const elUrb = document.getElementById("kpi-flota-urbanos");
+  const elNac = document.getElementById("kpi-flota-nacional");
+
+  // Si hay clasificación: separar urbanos y nacionales
+  // Si no hay clasificación (ej. demo sin tipo): mostrar todos en urbanos
+  if(elUrb) elUrb.innerHTML = (hayTipos ? segUrb : seg).length > 0
+    ? buildKpiFlota(hayTipos ? segUrb : seg)
+    : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin datos de flota urbana</div>';
+
+  if(elNac) elNac.innerHTML = hayTipos
+    ? (segNac.length > 0
+        ? buildKpiFlota(segNac)
+        : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales</div>')
     : '<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
 
 
