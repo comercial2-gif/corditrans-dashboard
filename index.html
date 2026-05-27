@@ -126,7 +126,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <button class="nav-tab active" onclick="showSec('flota',this)">Flota</button>
     <button class="nav-tab" onclick="showSec('clientes',this)">Clientes</button>
     <button class="nav-tab" onclick="showSec('analistas',this)">Analistas</button>
-    <button class="nav-tab" onclick="showSec('resumen',this)">Resumen</button>
   </div>
   <div class="hdr-right">
     <button class="btn-hdr" id="btn-act" onclick="recargar()" style="display:none">↻ Actualizar</button>
@@ -380,71 +379,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="row c2" id="analyst-grid"></div>
 </div>
 
-<!-- RESUMEN -->
-<div class="section" id="sec-resumen">
-
-  <!-- Encabezado con estado de carga -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted2)">
-      Comparativo mensual · Marzo — Mayo 2026
-    </div>
-    <div id="res-estado" style="font-size:9px;color:var(--muted2)">Cargando...</div>
-  </div>
-
-  <!-- KPIs de tendencia general -->
-  <div id="res-kpis" style="margin-bottom:18px;"></div>
-
-  <!-- Gráfica de tendencia facturación total -->
-  <div class="card" style="margin-bottom:14px;">
-    <div class="card-head">
-      <div class="card-title"><span class="dot-t" style="background:var(--green)"></span>Facturación Total — Tendencia Mensual</div>
-    </div>
-    <div style="position:relative;height:200px;">
-      <canvas id="chart-res-tendencia" aria-label="Gráfica de tendencia mensual de facturación"></canvas>
-    </div>
-  </div>
-
-  <!-- Tres tablas comparativas en columnas -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;" id="res-grid-tablas">
-
-    <!-- Comparativo por Analista -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title"><span class="dot-t" style="background:var(--blue)"></span>Analistas — Mes a Mes</div>
-      </div>
-      <div id="res-tbl-analistas"></div>
-    </div>
-
-    <!-- Comparativo por Cliente -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title"><span class="dot-t" style="background:var(--accent)"></span>Clientes — Mes a Mes</div>
-      </div>
-      <div style="margin-bottom:8px;display:flex;gap:6px;align-items:center;">
-        <label style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:1px">Top</label>
-        <select id="res-top-cli" onchange="renderResumen()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 8px;font-size:11px;outline:none;">
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="999">Todos</option>
-        </select>
-        <label style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:1px">clientes</label>
-      </div>
-      <div id="res-tbl-clientes"></div>
-    </div>
-
-    <!-- Comparativo por Vehículo -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title"><span class="dot-t" style="background:var(--purple)"></span>Vehículos — Mes a Mes</div>
-      </div>
-      <div id="res-tbl-vehiculos"></div>
-    </div>
-
-  </div>
-
-</div>
-<!-- FIN RESUMEN -->
-
 </div><!-- /main -->
 
 <div id="chart-tooltip"><div id="tt-bar"></div><div id="tt-nom"></div><div id="tt-val"></div></div>
@@ -486,11 +420,11 @@ const DEMO_SEG=[
   {p:"SNY134",c:"JOSE POCATERRA",meta:30500000,oo:0,razon:"",analista:"Rosa Ricardo",real:24772791,estado:"ACTIVO"},
 ];
 const DEMO_ANA=[
-  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876",tipo:"URBANOS"},
-  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff",tipo:"URBANOS"},
-  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020",tipo:"URBANOS"},
-  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff",tipo:"NACIONAL"},
-  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040",tipo:"NACIONAL"},
+  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876"},
+  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff"},
+  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020"},
+  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff"},
+  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040"},
 ];
 const DEMO_CLI=[
   {nombre:"GESTION CARGO ZONA FRANCA S.A.S",analista:"Sandra Ballesteros",ops:259,facturado:117000000},
@@ -657,13 +591,11 @@ async function cargarSheet(id){
     if(fn)fn.textContent=MES_FLOTA+" (hoja no encontrada)";
     console.warn("Hoja de flota no encontrada:",MES_FLOTA);
   }
-  const [filasTA,filasAna,filasComb,filasTotalAna]=await Promise.all([
+  const [filasTA,filasAna,filasComb]=await Promise.all([
     fetchCSV(id,"RESUMEN").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
-    fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
-    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),
+    fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),   // hoja de combustible
   ]);
-  TOTAL_ANA_FILAS = filasTotalAna;
   SEG_DATA=procesarSeg(filasSeg);
   console.log("🔍 filasSeg crudas:",filasSeg.length, filasSeg[0]?Object.keys(filasSeg[0]):[]);
   console.log("🔍 SEG_DATA procesado:",SEG_DATA.length, SEG_DATA[0]);
@@ -696,14 +628,7 @@ function cargarDemo(){
   poblarSelectores();
   actualizarHeader();
   cerrarModal();
-  try{ 
-    renderFlota(SEG_DATA); 
-  } catch(e){ 
-    console.error("renderFlota FALLO:",e);
-    const el=document.getElementById("kpi-flota-urbanos");
-    if(el) el.innerHTML='<div style="color:red;font-size:11px;padding:8px">Error: '+e.message+'</div>';
-  }
-  try{ renderCombustible([]); } catch(e){ console.warn("renderCombustible demo error:",e); }
+  renderFlota(SEG_DATA);
   renderClientes(DEMO_CLI);
   renderAnalistas(DEMO_CLI,DEMO_ANA);
   setTimeout(animateBars,120);
@@ -810,35 +735,23 @@ function buildKpiFlota(grupo){
 }
 
 function renderFlota(seg){
-  // Normalizar nombre para comparación robusta (sin importar mayúsculas ni espacios extra)
-  const norm = s => (s||"").toUpperCase().trim().replace(/\s+/g," ");
-
-  // Construir mapa analista → tipo usando ANALISTAS_DATA
+  // Separar vehículos por tipo usando ANALISTAS_DATA
   const tipoMap={};
   (ANALISTAS_DATA||[]).forEach(a=>{
-    const key = norm(a.nombre);
-    const tipo = norm(a.tipo||"");
-    if(key) tipoMap[key] = tipo;
+    const t=(a.tipo||"").toUpperCase();
+    tipoMap[(a.nombre||"").toUpperCase()]=t;
   });
-
-  const segUrb = seg.filter(v => tipoMap[norm(v.analista)] === "URBANOS");
-  const segNac = seg.filter(v => tipoMap[norm(v.analista)] === "NACIONAL");
-  const hayTipos = segUrb.length > 0 || segNac.length > 0;
-
-  const elUrb = document.getElementById("kpi-flota-urbanos");
-  const elNac = document.getElementById("kpi-flota-nacional");
-
-  // Si hay clasificación: separar urbanos y nacionales
-  // Si no hay clasificación (ej. demo sin tipo): mostrar todos en urbanos
-  if(elUrb) elUrb.innerHTML = (hayTipos ? segUrb : seg).length > 0
-    ? buildKpiFlota(hayTipos ? segUrb : seg)
-    : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin datos de flota urbana</div>';
-
-  if(elNac) elNac.innerHTML = hayTipos
-    ? (segNac.length > 0
-        ? buildKpiFlota(segNac)
-        : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales</div>')
-    : '<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
+  // Debug: verificar cuántos vehículos tienen analista asignado y tipo detectado
+  const sinTipo=seg.filter(v=>!tipoMap[(v.analista||"").toUpperCase()]);
+  if(sinTipo.length>0)console.warn("Vehículos sin tipo detectado:",sinTipo.map(v=>v.p+"="+v.analista));
+  const segUrb=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="URBANOS");
+  const segNac=seg.filter(v=>tipoMap[(v.analista||"").toUpperCase()]==="NACIONAL");
+  const elUrb=document.getElementById("kpi-flota-urbanos");
+  const elNac=document.getElementById("kpi-flota-nacional");
+  // Si no hay separación (ANALISTAS_DATA sin tipo), mostrar todos en urbanos
+  const hayTipos=segUrb.length>0||segNac.length>0;
+  if(elUrb) elUrb.innerHTML=hayTipos?(segUrb.length>0?buildKpiFlota(segUrb):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>'):buildKpiFlota(seg);
+  if(elNac) elNac.innerHTML=hayTipos?(segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>'):'<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
 
 
   // Resto del render (tabla, panel derecho) usa datos totales
@@ -1258,7 +1171,7 @@ function renderCombustible(filas){
     }
   }
   // ── Gráfica de líneas: rendimiento por tanqueo ──
-  setTimeout(() => { try{ buildLineChart(filas); }catch(e){ console.warn("buildLineChart error:",e); } }, 100);
+  setTimeout(() => buildLineChart(filas), 100);
 }
 
 function renderClientes(clientes){
@@ -1392,234 +1305,8 @@ function kpiStrip(lista, titulo, color) {
   </div>`;
 }
 
-
-// ══════════════════════════════════════════════
-// MÓDULO RESUMEN — Comparativo mes a mes
-// Fuente: hoja "TOTAL ANALISTAS" del Sheet
-// Meses fijos: Marzo(3), Abril(4), Mayo(5)
-// ══════════════════════════════════════════════
-
-const MESES_RES = [
-  {num:3, label:'Mar', nombre:'MARZO'},
-  {num:4, label:'Abr', nombre:'ABRIL'},
-  {num:5, label:'May', nombre:'MAYO'},
-];
-
-let TOTAL_ANA_FILAS = [];  // filas crudas de TOTAL ANALISTAS
-let chartResTendencia = null;
-
-// Extraer número de mes de una fecha DD/MM/YYYY o YYYY-MM-DD
-function mesDeFeha(fechaStr) {
-  if (!fechaStr) return 0;
-  const s = fechaStr.trim();
-  // Formato DD/MM/YYYY
-  if (s.includes('/')) {
-    const parts = s.split('/');
-    return parseInt(parts[1]) || 0;
-  }
-  // Formato YYYY-MM-DD
-  if (s.includes('-')) {
-    const parts = s.split('-');
-    return parseInt(parts[1]) || 0;
-  }
-  return 0;
-}
-
-// Procesar filas de TOTAL ANALISTAS y agrupar por (mes, dimensión, clave)
-// Retorna un mapa: { 'ANALISTA': { 'Sandra Ballesteros': { 3: 50000000, 4: 60000000, 5: 55000000 } } }
-function procesarTotalAnalistas(filas) {
-  const result = {
-    analistas: {},   // por analista
-    clientes:  {},   // por cliente
-    vehiculos: {},   // por placa
-  };
-
-  filas.forEach(r => {
-    const fechaStr = r['FECHA'] || '';
-    const mes = mesDeFeha(fechaStr);
-    if (mes < 3 || mes > 5) return; // solo Mar-May
-
-    // Leer el valor facturado — columna "# COBRO REMESA"
-    const cobro = pMoney(
-      r['# COBRO REMESA'] || r['COBRO REMESA'] || r['cobro remesa'] || '0'
-    );
-    if (cobro <= 0) return; // ignorar filas sin valor
-
-    const analista = (r['ANALISTA'] || '').trim();
-    const cliente  = (r['CLIENTE']  || '').trim();
-    const placa    = (r['PLACA']    || '').trim().toUpperCase();
-
-    // Acumular por analista
-    if (analista) {
-      if (!result.analistas[analista]) result.analistas[analista] = {};
-      result.analistas[analista][mes] = (result.analistas[analista][mes] || 0) + cobro;
-    }
-    // Acumular por cliente
-    if (cliente) {
-      if (!result.clientes[cliente]) result.clientes[cliente] = {};
-      result.clientes[cliente][mes] = (result.clientes[cliente][mes] || 0) + cobro;
-    }
-    // Acumular por placa
-    if (placa) {
-      if (!result.vehiculos[placa]) result.vehiculos[placa] = {};
-      result.vehiculos[placa][mes] = (result.vehiculos[placa][mes] || 0) + cobro;
-    }
-  });
-
-  return result;
-}
-
-// Construir una tabla comparativa mes a mes a partir de un mapa { nombre: { mes: valor } }
-// topN limita cuántas filas mostrar (por total descendente)
-function buildTablaComparativa(mapa, topN = 999) {
-  const meses = MESES_RES;
-
-  // Convertir a array, calcular total y ordenar descendente
-  const filas = Object.entries(mapa).map(([nombre, vals]) => {
-    const total = meses.reduce((s, m) => s + (vals[m.num] || 0), 0);
-    return { nombre, vals, total };
-  }).sort((a, b) => b.total - a.total).slice(0, topN);
-
-  if (!filas.length) return '<div style="font-size:11px;color:var(--muted);padding:8px 0">Sin datos</div>';
-
-  // Encabezado de la tabla
-  const thead = `<tr>
-    <th style="text-align:left;min-width:120px">Nombre</th>
-    ${meses.map(m => `<th class="r">${m.label}</th>`).join('')}
-    <th class="r">Total</th>
-    <th class="r" style="width:50px">Tend.</th>
-  </tr>`;
-
-  // Filas de datos
-  const tbody = filas.map((f, idx) => {
-    const celdas = meses.map(m => {
-      const v = f.vals[m.num] || 0;
-      return `<td class="num" style="font-size:11px">${v > 0 ? fmt(v) : '<span style="color:var(--muted2)">—</span>'}</td>`;
-    }).join('');
-
-    // Tendencia: comparar último mes vs penúltimo
-    const vLast = f.vals[5] || 0;  // Mayo
-    const vPrev = f.vals[4] || f.vals[3] || 0; // Abril o Marzo
-    let tendIcon = '—', tendColor = 'var(--muted2)';
-    if (vLast > 0 && vPrev > 0) {
-      if (vLast > vPrev * 1.02) { tendIcon = '▲'; tendColor = 'var(--green)'; }
-      else if (vLast < vPrev * 0.98) { tendIcon = '▼'; tendColor = 'var(--red)'; }
-      else { tendIcon = '→'; tendColor = 'var(--yellow)'; }
-    }
-
-    const bg = idx % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)';
-    return `<tr style="${bg}">
-      <td style="font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${idx<3?'600':'400'}">${f.nombre}</td>
-      ${celdas}
-      <td class="num" style="font-size:11px;font-weight:600;color:var(--text)">${fmt(f.total)}</td>
-      <td class="num" style="font-size:14px;color:${tendColor};font-weight:700">${tendIcon}</td>
-    </tr>`;
-  }).join('');
-
-  return `<div style="overflow-x:auto;">
-    <table class="ftbl" style="min-width:100%">
-      <thead>${thead}</thead>
-      <tbody>${tbody}</tbody>
-    </table>
-  </div>`;
-}
-
-// Render principal del módulo RESUMEN
-function renderResumen() {
-  const secEl = document.getElementById('sec-resumen');
-  if (!secEl || !secEl.classList.contains('active')) return;
-
-  const estadoEl = document.getElementById('res-estado');
-  if (!TOTAL_ANA_FILAS.length) {
-    if (estadoEl) estadoEl.textContent = MODO === 'live'
-      ? 'Sin datos — verifica que la hoja TOTAL ANALISTAS esté publicada'
-      : 'Conecta el Sheet para ver datos reales';
-    return;
-  }
-
-  if (estadoEl) estadoEl.textContent = `${TOTAL_ANA_FILAS.length.toLocaleString('es-CO')} registros · Mar–May 2026`;
-
-  const datos = procesarTotalAnalistas(TOTAL_ANA_FILAS);
-
-  // ── KPIs de tendencia general ──
-  const totPorMes = MESES_RES.map(m => ({
-    label: m.label,
-    num: m.num,
-    val: Object.values(datos.clientes).reduce((s, v) => s + (v[m.num] || 0), 0)
-  }));
-
-  const kpisEl = document.getElementById('res-kpis');
-  if (kpisEl) {
-    kpisEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${MESES_RES.length + 2},1fr);gap:10px;">
-      ${totPorMes.map((m, i) => {
-        const prev = i > 0 ? totPorMes[i-1].val : 0;
-        const pct = prev > 0 ? Math.round(((m.val - prev) / prev) * 100) : null;
-        const pctStr = pct !== null ? `${pct > 0 ? '+' : ''}${pct}% vs ${totPorMes[i-1].label}` : 'Base';
-        const col = pct === null ? 'var(--muted2)' : pct >= 0 ? 'var(--green)' : 'var(--red)';
-        return `<div class="kpi cb">
-          <div class="kpi-label">Total ${m.label}</div>
-          <div class="kpi-val" style="font-size:22px">${fmt(m.val)}</div>
-          <div class="kpi-sub" style="color:${col}">${pctStr}</div>
-        </div>`;
-      }).join('')}
-      <div class="kpi cg">
-        <div class="kpi-label">Analistas activos</div>
-        <div class="kpi-val" style="font-size:22px">${Object.keys(datos.analistas).length}</div>
-        <div class="kpi-sub">en el período</div>
-      </div>
-      <div class="kpi cy">
-        <div class="kpi-label">Vehículos activos</div>
-        <div class="kpi-val" style="font-size:22px">${Object.keys(datos.vehiculos).length}</div>
-        <div class="kpi-sub">con operación</div>
-      </div>
-    </div>`;
-  }
-
-  // ── Gráfica de tendencia ──
-  const canvas = document.getElementById('chart-res-tendencia');
-  if (canvas) {
-    if (chartResTendencia) { chartResTendencia.destroy(); chartResTendencia = null; }
-    chartResTendencia = new Chart(canvas.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: totPorMes.map(m => m.label),
-        datasets: [{
-          label: 'Facturación total',
-          data: totPorMes.map(m => m.val),
-          backgroundColor: ['rgba(74,158,255,.7)', 'rgba(232,160,32,.7)', 'rgba(31,200,118,.7)'],
-          borderColor:     ['#4A9EFF', '#E8A020', '#1FC876'],
-          borderWidth: 1.5,
-          borderRadius: 3,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.parsed.y)}` } }
-        },
-        scales: {
-          x: { ticks: { color:'#7A8299', font:{size:11} }, grid: { display:false } },
-          y: { ticks: { color:'#7A8299', font:{size:10}, callback: v => fmt(v) }, grid: { color:'rgba(31,35,48,.6)' } }
-        }
-      }
-    });
-  }
-
-  // ── Tablas comparativas ──
-  const topN = parseInt(document.getElementById('res-top-cli')?.value || '10');
-
-  const tblAna = document.getElementById('res-tbl-analistas');
-  if (tblAna) tblAna.innerHTML = buildTablaComparativa(datos.analistas);
-
-  const tblCli = document.getElementById('res-tbl-clientes');
-  if (tblCli) tblCli.innerHTML = buildTablaComparativa(datos.clientes, topN);
-
-  const tblVeh = document.getElementById('res-tbl-vehiculos');
-  if (tblVeh) tblVeh.innerHTML = buildTablaComparativa(datos.vehiculos);
-}
-
-
+// ── RENDER ANALISTAS ──
+function renderAnalistas(clientes,analistas){
   const el=document.getElementById("kpi-analistas");if(!el)return;
   if(!analistas||!analistas.length){el.innerHTML="";return;}
 
@@ -1716,7 +1403,6 @@ function showSec(name,btn){
   document.getElementById("sec-"+name).classList.add("active");
   btn.classList.add("active");
   if(name==="clientes"||name==="analistas"){setTimeout(()=>{renderCliAnalistas();setTimeout(animateBars,80);},30);}
-  else if(name==="resumen"){setTimeout(()=>renderResumen(),50);}
   else setTimeout(animateBars,50);
 }
 
