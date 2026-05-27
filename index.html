@@ -486,11 +486,11 @@ const DEMO_SEG=[
   {p:"SNY134",c:"JOSE POCATERRA",meta:30500000,oo:0,razon:"",analista:"Rosa Ricardo",real:24772791,estado:"ACTIVO"},
 ];
 const DEMO_ANA=[
-  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876"},
-  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff"},
-  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020"},
-  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff"},
-  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040"},
+  {nombre:"Sandra Ballesteros",meta:180000000,color:"#1fc876",tipo:"URBANOS"},
+  {nombre:"Kiara Correa",meta:180000000,color:"#4a9eff",tipo:"URBANOS"},
+  {nombre:"Rosa Ricardo",meta:110000000,color:"#e8a020",tipo:"URBANOS"},
+  {nombre:"Nancy Mercado",meta:130000000,color:"#9b6fff",tipo:"NACIONAL"},
+  {nombre:"Carlos Gómez",meta:100000000,color:"#e84040",tipo:"NACIONAL"},
 ];
 const DEMO_CLI=[
   {nombre:"GESTION CARGO ZONA FRANCA S.A.S",analista:"Sandra Ballesteros",ops:259,facturado:117000000},
@@ -817,9 +817,14 @@ function renderFlota(seg){
   const elUrb=document.getElementById("kpi-flota-urbanos");
   const elNac=document.getElementById("kpi-flota-nacional");
   // Si no hay separación (ANALISTAS_DATA sin tipo), mostrar todos en urbanos
-  const hayTipos=segUrb.length>0||segNac.length>0;
-  if(elUrb) elUrb.innerHTML=hayTipos?(segUrb.length>0?buildKpiFlota(segUrb):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>'):buildKpiFlota(seg);
-  if(elNac) elNac.innerHTML=hayTipos?(segNac.length>0?buildKpiFlota(segNac):'<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>'):'<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
+  // Si no hay separación por tipo, mostrar todos en Urbano y mensaje en Nacional
+  const hayTipos = segUrb.length > 0 || segNac.length > 0;
+  if (elUrb) elUrb.innerHTML = hayTipos
+    ? (segUrb.length > 0 ? buildKpiFlota(segUrb) : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos urbanos</div>')
+    : buildKpiFlota(seg); // fallback: mostrar todos si no hay clasificación
+  if (elNac) elNac.innerHTML = hayTipos
+    ? (segNac.length > 0 ? buildKpiFlota(segNac) : '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin vehículos nacionales registrados</div>')
+    : '<div style="font-size:11px;color:var(--muted2);padding:6px 0">Verifica que la hoja ANALISTAS tenga columna TIPO con valores URBANOS/NACIONAL</div>';
 
 
   // Resto del render (tabla, panel derecho) usa datos totales
