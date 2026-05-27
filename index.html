@@ -696,7 +696,13 @@ function cargarDemo(){
   poblarSelectores();
   actualizarHeader();
   cerrarModal();
-  try{ renderFlota(SEG_DATA); } catch(e){ console.warn("renderFlota demo error:",e); }
+  try{ 
+    renderFlota(SEG_DATA); 
+  } catch(e){ 
+    console.error("renderFlota FALLO:",e);
+    const el=document.getElementById("kpi-flota-urbanos");
+    if(el) el.innerHTML='<div style="color:red;font-size:11px;padding:8px">Error: '+e.message+'</div>';
+  }
   try{ renderCombustible([]); } catch(e){ console.warn("renderCombustible demo error:",e); }
   renderClientes(DEMO_CLI);
   renderAnalistas(DEMO_CLI,DEMO_ANA);
