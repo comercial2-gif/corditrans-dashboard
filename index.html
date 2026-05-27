@@ -696,7 +696,8 @@ function cargarDemo(){
   poblarSelectores();
   actualizarHeader();
   cerrarModal();
-  renderFlota(SEG_DATA);
+  try{ renderFlota(SEG_DATA); } catch(e){ console.warn("renderFlota demo error:",e); }
+  try{ renderCombustible([]); } catch(e){ console.warn("renderCombustible demo error:",e); }
   renderClientes(DEMO_CLI);
   renderAnalistas(DEMO_CLI,DEMO_ANA);
   setTimeout(animateBars,120);
@@ -1251,7 +1252,7 @@ function renderCombustible(filas){
     }
   }
   // ── Gráfica de líneas: rendimiento por tanqueo ──
-  setTimeout(() => buildLineChart(filas), 100);
+  setTimeout(() => { try{ buildLineChart(filas); }catch(e){ console.warn("buildLineChart error:",e); } }, 100);
 }
 
 function renderClientes(clientes){
