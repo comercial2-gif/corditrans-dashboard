@@ -554,6 +554,9 @@ function procesarSeg(filas){
   const colOO=keys.find(k=>k.toUpperCase().includes("FUERA")&&k.toUpperCase().includes("SERVICIO"))||null;
   // Buscar columna meta diaria
   const colMetaDia=keys.find(k=>k.toUpperCase().includes("META")&&k.toUpperCase().includes("DIARIA"))||null;
+  // Columna "IDEAL HASTA HOY" del Sheet — esperado acumulado real según días laborados
+  const colIdeal=keys.find(k=>k.toUpperCase().includes("IDEAL")&&k.toUpperCase().includes("HOY"))||
+                 keys.find(k=>k.toUpperCase().includes("IDEAL"))||null;
   // Buscar columna dias lab
   const colDiasLab=keys.find(k=>k.toUpperCase().includes("DIAS")&&k.toUpperCase().includes("LAB"))||null;
 
@@ -562,13 +565,15 @@ function procesarSeg(filas){
     .map(r=>{
       const meta=pMoney(r["META MES"]||r["META"]||"0");
       const diasLab=colDiasLab?parseInt(r[colDiasLab])||0:0;
-      // Derivar metaDiaria de meta/diasLab para evitar problemas de escala con el CSV
       const metaDiaria=meta>0&&diasLab>0?meta/diasLab:colMetaDia?pMoney(r[colMetaDia]||"0"):0;
+      // Leer IDEAL HASTA HOY directamente del Sheet — es el esperado acumulado real
+      const idealHoy=colIdeal?pMoney(r[colIdeal]||"0"):0;
       return {
         p:(r[colPlaca]||"").trim(),
         c:r["CONDUCTOR"]||r["CONDUCTORES"]||"",
         meta,
         metaDiaria,
+        idealHoy,  // esperado acumulado según días reales laborados
         diasLab,
         oo:colOO?parseInt(r[colOO])||0:0,
         analista:colAna?r[colAna]||"":r["ANALISTA"]||"",
@@ -758,7 +763,8 @@ function buildKpiFlota(grupo){
   const tMeta=grupo.reduce((s,v)=>s+v.meta,0),tReal=grupo.reduce((s,v)=>s+v.real,0);
   const pctG=tMeta>0?Math.round((tReal/tMeta)*100):0;
   const diasLab=grupo.length>0?grupo[0].diasLab:0;
-  const tEsperado=grupo.reduce((s,v)=>s+(v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
+  // Usar IDEAL HASTA HOY del Sheet si está disponible; si no, calcular con meta*PROG
+  const tEsperado=grupo.reduce((s,v)=>s+(v.idealHoy>0?v.idealHoy:v.metaDiaria>0?v.metaDiaria*diasLab:v.meta*PROG),0);
   const enAlerta=act.filter(v=>v.meta>0&&Math.round((v.real/v.meta)*100)<70).length;
   const pctOp=grupo.length>0?Math.round((act.length/grupo.length)*100):0;
   return `
@@ -797,7 +803,7 @@ function renderFlota(seg){
   const tb=document.getElementById("fleet-tbody");if(tb){tb.innerHTML="";
     sorted.forEach(v=>{
       const p=v.meta>0?Math.round((v.real/v.meta)*100):0,bw=Math.min(p,100),s=sem(p);
-      const esperadoV=v.metaDiaria>0?v.metaDiaria*v.diasLab:v.meta*PROG;
+      const esperadoV=v.idealHoy>0?v.idealHoy:v.metaDiaria>0?v.metaDiaria*v.diasLab:v.meta*PROG;
       tb.innerHTML+=`<tr><td class="plate">${v.p}</td><td style="font-size:11px;color:var(--muted2);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.c}</td>
         <td>${v.estado==="PARO"?`<span class="chip r">${v.oo>0?v.oo+"d ":""}Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
         <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
