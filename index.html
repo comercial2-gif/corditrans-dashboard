@@ -559,17 +559,23 @@ function procesarSeg(filas){
 
   return filas
     .filter(r=>{const p=(r[colPlaca]||"").trim();return p&&p!=="Total"&&p!==colPlaca&&/^[A-Z][-A-Z]{1,4}\d{3}/.test(p);})
-    .map(r=>({
-      p:(r[colPlaca]||"").trim(),
-      c:r["CONDUCTOR"]||r["CONDUCTORES"]||"",
-      meta:pMoney(r["META MES"]||r["META"]||"0"),
-      metaDiaria:colMetaDia?pMoney(r[colMetaDia]||"0"):0,
-      diasLab:colDiasLab?parseInt(r[colDiasLab])||0:0,
-      oo:colOO?parseInt(r[colOO])||0:0,
-      analista:colAna?r[colAna]||"":r["ANALISTA"]||"",
-      real:pMoney(colR?r[colR]:(r["PRODUCCION REAL"]||r["PRODUCCIÓN REAL"]||"0")),
-      estado:(r["ESTADO"]||"ACTIVO").trim().toUpperCase(),
-    }));
+    .map(r=>{
+      const meta=pMoney(r["META MES"]||r["META"]||"0");
+      const diasLab=colDiasLab?parseInt(r[colDiasLab])||0:0;
+      // Derivar metaDiaria de meta/diasLab para evitar problemas de escala con el CSV
+      const metaDiaria=meta>0&&diasLab>0?meta/diasLab:colMetaDia?pMoney(r[colMetaDia]||"0"):0;
+      return {
+        p:(r[colPlaca]||"").trim(),
+        c:r["CONDUCTOR"]||r["CONDUCTORES"]||"",
+        meta,
+        metaDiaria,
+        diasLab,
+        oo:colOO?parseInt(r[colOO])||0:0,
+        analista:colAna?r[colAna]||"":r["ANALISTA"]||"",
+        real:pMoney(colR?r[colR]:(r["PRODUCCION REAL"]||r["PRODUCCIÓN REAL"]||"0")),
+        estado:(r["ESTADO"]||"ACTIVO").trim().toUpperCase(),
+      };
+    });
 }
 
 function procesarCliAnalistas(filas,mesNum){
