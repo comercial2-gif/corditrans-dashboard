@@ -443,33 +443,32 @@ const DEMO_CLI=[
 function fmt(v){if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(1)+"M";if(v>=1e3)return"$"+(v/1e3).toFixed(0)+"K";return"$"+Math.round(v).toLocaleString("es-CO");}
 function sem(p){if(p>=90)return{c:"g",l:"Verde"};if(p>=70)return{c:"y",l:"Amarillo"};return{c:"r",l:"Rojo"};}
 function bc(p){if(p>=90)return"var(--green)";if(p>=70)return"var(--yellow)";return"var(--red)";}
-function pMoney(v){
+// pMoneyRaw: convierte string a número en pesos, SIN multiplicar por millón
+// Usar para valores que ya vienen en pesos enteros (ej: TOTAL ANALISTAS)
+function pMoneyRaw(v){
   if(!v)return 0;
-  const s=String(v).replace(/[$\s]/g,""); // quitar $ y espacios, mantener puntos y comas
-  // Detectar si viene en formato colombiano con puntos como miles: "31.500.000"
-  // vs formato con punto decimal: "550.5"
+  const s=String(v).replace(/[$\s]/g,"");
   const puntos=(s.match(/\./g)||[]).length;
-  const comas=(s.match(/,/g)||[]).length;
   let num;
   if(puntos>1){
-    // Múltiples puntos = separador de miles colombiano: "31.500.000" → 31500000
     num=parseFloat(s.replace(/\./g,"").replace(/,/g,"."))||0;
-  } else if(puntos===1&&comas===0){
-    // Un solo punto: puede ser decimal ("550.5") o miles ("1.500")
+  } else if(puntos===1){
     const partes=s.split(".");
     if(partes[1]&&partes[1].length===3){
-      // Tres decimales = separador de miles: "1.500" → 1500
       num=parseFloat(s.replace(/\./g,""))||0;
     } else {
-      // Punto decimal normal: "550.5" → 550.5
       num=parseFloat(s)||0;
     }
   } else {
-    // Sin puntos o con coma: quitar comas y parsear
     num=parseFloat(s.replace(/,/g,"."))||0;
   }
-  // Si el resultado es menor a 10.000, probablemente el Sheet exportó en millones
-  // (celda formateada como millones): multiplicar para llevar a pesos
+  return num;
+}
+
+// pMoney: igual que pMoneyRaw pero multiplica por 1M si el valor es < 10.000
+// Usar para hojas que exportan en millones (ej: hoja MAYO de seguimiento de flota)
+function pMoney(v){
+  const num=pMoneyRaw(v);
   if(num>0&&num<10000)return num*1000000;
   return num;
 }
@@ -585,19 +584,18 @@ function procesarSeg(filas){
 
 function procesarCliAnalistas(filas,mesNum){
   let f=filas;
+
+  // Filtrar por mes usando columna FECHA (formato DD/MM/YYYY)
   if(mesNum>0){
     f=filas.filter(r=>{
-      // Intentar columna MES primero, si no extraer de FECHA
-      const mesCol=parseInt(r["MES"]||r["mes"]||"0");
-      if(mesCol>0) return mesCol===mesNum;
-      // Extraer mes de la fecha (formato DD/MM/YYYY o YYYY-MM-DD)
       const fechaStr=(r["FECHA"]||"").trim();
       if(!fechaStr) return false;
-      const mesF=parseFecha(fechaStr)?.getMonth()+1||0;
-      return mesF===mesNum;
+      const d=parseFecha(fechaStr);
+      return d?(d.getMonth()+1)===mesNum:false;
     });
   }
-  // Filtro de rango adicional
+
+  // Filtro de rango adicional por fecha desde/hasta
   const secActiva=document.querySelector(".section.active")?.id||"";
   const pref=secActiva==="sec-analistas"?"ana":"cli";
   const desdeEl=document.getElementById(pref+"-desde");
@@ -607,25 +605,46 @@ function procesarCliAnalistas(filas,mesNum){
   if(desde||hasta){
     f=f.filter(r=>{
       const d=parseFecha(r["FECHA"]||"");if(!d)return true;
-      if(desde&&d<desde)return false;if(hasta&&d>hasta)return false;return true;
+      if(desde&&d<desde)return false;
+      if(hasta&&d>hasta)return false;
+      return true;
     });
   }
+
   const map={};
+
+  // Mapa de tipo por analista desde hoja ANALISTAS (ya clasificados correctamente)
+  const tipoAna={};
+  (ANALISTAS_DATA||[]).forEach(a=>{
+    tipoAna[(a.nombre||"").toUpperCase().trim()]=(a.tipo||"URBANOS").toUpperCase();
+  });
+
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
-    const cobro=pMoney(r["# COBRO REMESA"]||r["COBRO REMESA"]||r["cobro remesa"]||"0");
-    if(!cli)return;
+    const cli=(r["CLIENTE"]||"").trim();
+    const ana=(r["ANALISTA"]||"").trim();
+    if(!cli||!ana) return;
+
+    // Tipo según la hoja ANALISTAS — ya clasificado por Eduardo
+    const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
+
+    const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
+    // CSV exporta en miles de pesos (ej: "790" = $790.000 reales)
+    const cobro=pMoneyRaw(cobroRaw);
+    if(cobro<=0) return;
+
     const key=ana+"|||"+cli;
-    if(!map[key])map[key]={cli,ana,ops:0,fac:0};
-    // Buscar la columna de operaciones con los nombres que puede tener en tu Sheet
-    const opsVal=r["OPS"]||r["OPERACIONES"]||r["ops"]||r["CANT"]||r["CANTIDAD"]||r["NUM OPS"]||r["# OPS"]||r["No. OPS"]||"";
-    const opsNum=parseInt(String(opsVal).replace(/[^0-9]/g,""))||0;
-    // Si la hoja trae el dato de ops, acumularlo; si no, cada fila cuenta como 1 operación
-    map[key].ops+=opsNum>0?opsNum:1;
+    if(!map[key]) map[key]={cli,ana,ops:0,fac:0,tipo};
+    map[key].ops++;
     map[key].fac+=cobro;
   });
-  // RESUMEN no tiene ops individuales, usar facturado como proxy
-  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
+
+  return Object.values(map).map(d=>({
+    nombre:d.cli,
+    analista:d.ana,
+    ops:d.ops||1,
+    facturado:d.fac,
+    tipo:d.tipo,
+  }));
 }
 
 // ── CARGA PRINCIPAL ──
@@ -642,11 +661,9 @@ async function cargarSheet(id){
     fetchCSV(id,"RESUMEN").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
     fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
-    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),  // fuente real con fechas para filtro por mes
+    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),
   ]);
   SEG_DATA=procesarSeg(filasSeg);
-  // Usar TOTAL ANALISTAS si está disponible (tiene fechas para filtrar por mes)
-  // Si no, caer en RESUMEN como fallback
   ALL_FILAS=filasTotalAna.length>0?filasTotalAna:filasTA;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
@@ -1237,8 +1254,9 @@ function renderClientes(clientes){
   // Separar por tipo usando ANALISTAS_DATA
   const tipoAna={};
   (ANALISTAS_DATA||[]).forEach(a=>{tipoAna[(a.nombre||"").toUpperCase()]=(a.tipo||"").toUpperCase();});
-  const cliUrb=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="URBANOS");
-  const cliNac=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="NACIONAL");
+  // El tipo viene directo del campo procesado desde TOTAL ANALISTAS (origen/destino)
+  const cliUrb=clientes.filter(c=>(c.tipo||"").toUpperCase()==="URBANOS");
+  const cliNac=clientes.filter(c=>(c.tipo||"").toUpperCase()==="NACIONAL");
 
   function kpiBloque(lista, titulo, color){
     if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
