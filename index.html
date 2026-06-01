@@ -612,7 +612,8 @@ function procesarCliAnalistas(filas,mesNum){
   }
   const map={};
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim(),cobro=pMoney(r["COBRO REMESA"]||"0");
+    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
+    const cobro=pMoney(r["# COBRO REMESA"]||r["COBRO REMESA"]||r["cobro remesa"]||"0");
     if(!cli)return;
     const key=ana+"|||"+cli;
     if(!map[key])map[key]={cli,ana,ops:0,fac:0};
@@ -637,15 +638,16 @@ async function cargarSheet(id){
     if(fn)fn.textContent=MES_FLOTA+" (hoja no encontrada)";
     console.warn("Hoja de flota no encontrada:",MES_FLOTA);
   }
-  const [filasTA,filasAna,filasComb]=await Promise.all([
+  const [filasTA,filasAna,filasComb,filasTotalAna]=await Promise.all([
     fetchCSV(id,"RESUMEN").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
-    fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),   // hoja de combustible
+    fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
+    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),  // fuente real con fechas para filtro por mes
   ]);
   SEG_DATA=procesarSeg(filasSeg);
-  console.log("🔍 filasSeg crudas:",filasSeg.length, filasSeg[0]?Object.keys(filasSeg[0]):[]);
-  console.log("🔍 SEG_DATA procesado:",SEG_DATA.length, SEG_DATA[0]);
-  ALL_FILAS=filasTA;
+  // Usar TOTAL ANALISTAS si está disponible (tiene fechas para filtrar por mes)
+  // Si no, caer en RESUMEN como fallback
+  ALL_FILAS=filasTotalAna.length>0?filasTotalAna:filasTA;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
