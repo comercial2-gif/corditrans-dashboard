@@ -612,17 +612,20 @@ function procesarCliAnalistas(filas,mesNum){
   }
 
   const map={};
+
+  // Mapa de tipo por analista desde hoja ANALISTAS (ya clasificados correctamente)
+  const tipoAna={};
+  (ANALISTAS_DATA||[]).forEach(a=>{
+    tipoAna[(a.nombre||"").toUpperCase().trim()]=(a.tipo||"URBANOS").toUpperCase();
+  });
+
   f.forEach(r=>{
     const cli=(r["CLIENTE"]||"").trim();
     const ana=(r["ANALISTA"]||"").trim();
-    if(!cli&&!ana) return;
+    if(!cli||!ana) return;
 
-    // Regla de negocio: URBANO si origen Y destino son Cartagena
-    // NACIONAL si cualquiera de los dos no es Cartagena
-    const origen=(r["ORIGEN"]||"").trim().toUpperCase();
-    const destino=(r["DESTINO"]||"").trim().toUpperCase();
-    const esUrbano=origen.includes("CARTAGENA")&&destino.includes("CARTAGENA");
-    const tipo=esUrbano?"URBANOS":"NACIONAL";
+    // Tipo según la hoja ANALISTAS — ya clasificado por Eduardo
+    const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
     // CSV exporta en miles de pesos (ej: "790" = $790.000 reales)
