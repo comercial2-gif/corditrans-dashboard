@@ -584,19 +584,18 @@ function procesarSeg(filas){
 
 function procesarCliAnalistas(filas,mesNum){
   let f=filas;
+
+  // Filtrar por mes usando columna FECHA (formato DD/MM/YYYY)
   if(mesNum>0){
     f=filas.filter(r=>{
-      // Intentar columna MES primero, si no extraer de FECHA
-      const mesCol=parseInt(r["MES"]||r["mes"]||"0");
-      if(mesCol>0) return mesCol===mesNum;
-      // Extraer mes de la fecha (formato DD/MM/YYYY o YYYY-MM-DD)
       const fechaStr=(r["FECHA"]||"").trim();
       if(!fechaStr) return false;
-      const mesF=parseFecha(fechaStr)?.getMonth()+1||0;
-      return mesF===mesNum;
+      const d=parseFecha(fechaStr);
+      return d?(d.getMonth()+1)===mesNum:false;
     });
   }
-  // Filtro de rango adicional
+
+  // Filtro de rango adicional por fecha desde/hasta
   const secActiva=document.querySelector(".section.active")?.id||"";
   const pref=secActiva==="sec-analistas"?"ana":"cli";
   const desdeEl=document.getElementById(pref+"-desde");
@@ -606,17 +605,44 @@ function procesarCliAnalistas(filas,mesNum){
   if(desde||hasta){
     f=f.filter(r=>{
       const d=parseFecha(r["FECHA"]||"");if(!d)return true;
-      if(desde&&d<desde)return false;if(hasta&&d>hasta)return false;return true;
+      if(desde&&d<desde)return false;
+      if(hasta&&d>hasta)return false;
+      return true;
     });
   }
+
   const map={};
   f.forEach(r=>{
-    const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
-    const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||r["cobro remesa"]||"0";
-    const cobro=pMoneyRaw(cobroRaw);
-    // LOG TEMPORAL — eliminar después de diagnosticar
-    if(Object.keys(map).length<3&&cobro>0)console.log("💰 cobro raw:",cobroRaw,"→",cobro,"ana:",ana);
-    if(!cli)return;
+    const cli=(r["CLIENTE"]||"").trim();
+    const ana=(r["ANALISTA"]||"").trim();
+    if(!cli&&!ana) return;
+
+    // Regla de negocio: URBANO si origen Y destino son Cartagena
+    // NACIONAL si cualquiera de los dos no es Cartagena
+    const origen=(r["ORIGEN"]||"").trim().toUpperCase();
+    const destino=(r["DESTINO"]||"").trim().toUpperCase();
+    const esUrbano=origen.includes("CARTAGENA")&&destino.includes("CARTAGENA");
+    const tipo=esUrbano?"URBANOS":"NACIONAL";
+
+    // Valor del cobro — TOTAL ANALISTAS tiene pesos enteros con formato colombiano
+    const cobro=pMoneyRaw(r["# COBRO REMESA"]||r["COBRO REMESA"]||"0");
+    if(cobro<=0) return;
+
+    const key=ana+"|||"+cli;
+    if(!map[key]) map[key]={cli,ana,ops:0,fac:0,tipo};
+    map[key].ops++;
+    map[key].fac+=cobro;
+  });
+
+  return Object.values(map).map(d=>({
+    nombre:d.cli,
+    analista:d.ana,
+    ops:d.ops||1,
+    facturado:d.fac,
+    tipo:d.tipo,
+  }));
+}
+
     const key=ana+"|||"+cli;
     if(!map[key])map[key]={cli,ana,ops:0,fac:0};
     // Buscar la columna de operaciones con los nombres que puede tener en tu Sheet
@@ -644,11 +670,9 @@ async function cargarSheet(id){
     fetchCSV(id,"RESUMEN").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
     fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
-    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),  // fuente real con fechas para filtro por mes
+    fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),
   ]);
   SEG_DATA=procesarSeg(filasSeg);
-  // Usar TOTAL ANALISTAS si está disponible (tiene fechas para filtrar por mes)
-  // Si no, caer en RESUMEN como fallback
   ALL_FILAS=filasTotalAna.length>0?filasTotalAna:filasTA;
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
@@ -1239,8 +1263,9 @@ function renderClientes(clientes){
   // Separar por tipo usando ANALISTAS_DATA
   const tipoAna={};
   (ANALISTAS_DATA||[]).forEach(a=>{tipoAna[(a.nombre||"").toUpperCase()]=(a.tipo||"").toUpperCase();});
-  const cliUrb=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="URBANOS");
-  const cliNac=clientes.filter(c=>tipoAna[(c.analista||"").toUpperCase()]==="NACIONAL");
+  // El tipo viene directo del campo procesado desde TOTAL ANALISTAS (origen/destino)
+  const cliUrb=clientes.filter(c=>(c.tipo||"").toUpperCase()==="URBANOS");
+  const cliNac=clientes.filter(c=>(c.tipo||"").toUpperCase()==="NACIONAL");
 
   function kpiBloque(lista, titulo, color){
     if(!lista.length) return `<div style="font-size:11px;color:var(--muted2);padding:6px 0">Sin datos ${titulo}</div>`;
