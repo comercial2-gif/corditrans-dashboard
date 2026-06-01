@@ -1380,7 +1380,9 @@ function renderAnalistas(clientes,analistas){
 
   // Renderizar en contenedores separados si existen, si no en el único
   const diasLabHoy=SEG_DATA.length>0?SEG_DATA[0].diasLab:0;
-  const now2=new Date(),mesActualNum2=now2.getMonth()+1,mesSeleccionado2=parseInt(MES_CLI)||mesActualNum2;
+  const now2=new Date(),mesActualNum2=now2.getMonth()+1;
+  // Convertir MES_CLI (nombre como "MAYO") a número — parseInt("MAYO") = NaN, hay que usar MESES
+  const mesSeleccionado2=MESES.findIndex(m=>m.toUpperCase()===(MES_CLI||'').trim().toUpperCase())+1||mesActualNum2;
   const esMesActual2=mesSeleccionado2===mesActualNum2;
 
   function renderBarsGrupo(elId,grupo){
