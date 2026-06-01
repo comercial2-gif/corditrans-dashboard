@@ -443,33 +443,32 @@ const DEMO_CLI=[
 function fmt(v){if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(1)+"M";if(v>=1e3)return"$"+(v/1e3).toFixed(0)+"K";return"$"+Math.round(v).toLocaleString("es-CO");}
 function sem(p){if(p>=90)return{c:"g",l:"Verde"};if(p>=70)return{c:"y",l:"Amarillo"};return{c:"r",l:"Rojo"};}
 function bc(p){if(p>=90)return"var(--green)";if(p>=70)return"var(--yellow)";return"var(--red)";}
-function pMoney(v){
+// pMoneyRaw: convierte string a número en pesos, SIN multiplicar por millón
+// Usar para valores que ya vienen en pesos enteros (ej: TOTAL ANALISTAS)
+function pMoneyRaw(v){
   if(!v)return 0;
-  const s=String(v).replace(/[$\s]/g,""); // quitar $ y espacios, mantener puntos y comas
-  // Detectar si viene en formato colombiano con puntos como miles: "31.500.000"
-  // vs formato con punto decimal: "550.5"
+  const s=String(v).replace(/[$\s]/g,"");
   const puntos=(s.match(/\./g)||[]).length;
-  const comas=(s.match(/,/g)||[]).length;
   let num;
   if(puntos>1){
-    // Múltiples puntos = separador de miles colombiano: "31.500.000" → 31500000
     num=parseFloat(s.replace(/\./g,"").replace(/,/g,"."))||0;
-  } else if(puntos===1&&comas===0){
-    // Un solo punto: puede ser decimal ("550.5") o miles ("1.500")
+  } else if(puntos===1){
     const partes=s.split(".");
     if(partes[1]&&partes[1].length===3){
-      // Tres decimales = separador de miles: "1.500" → 1500
       num=parseFloat(s.replace(/\./g,""))||0;
     } else {
-      // Punto decimal normal: "550.5" → 550.5
       num=parseFloat(s)||0;
     }
   } else {
-    // Sin puntos o con coma: quitar comas y parsear
     num=parseFloat(s.replace(/,/g,"."))||0;
   }
-  // Si el resultado es menor a 10.000, probablemente el Sheet exportó en millones
-  // (celda formateada como millones): multiplicar para llevar a pesos
+  return num;
+}
+
+// pMoney: igual que pMoneyRaw pero multiplica por 1M si el valor es < 10.000
+// Usar para hojas que exportan en millones (ej: hoja MAYO de seguimiento de flota)
+function pMoney(v){
+  const num=pMoneyRaw(v);
   if(num>0&&num<10000)return num*1000000;
   return num;
 }
@@ -613,7 +612,10 @@ function procesarCliAnalistas(filas,mesNum){
   const map={};
   f.forEach(r=>{
     const cli=(r["CLIENTE"]||"").trim(),ana=(r["ANALISTA"]||"").trim();
-    const cobro=pMoney(r["# COBRO REMESA"]||r["COBRO REMESA"]||r["cobro remesa"]||"0");
+    const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||r["cobro remesa"]||"0";
+    const cobro=pMoneyRaw(cobroRaw);
+    // LOG TEMPORAL — eliminar después de diagnosticar
+    if(Object.keys(map).length<3&&cobro>0)console.log("💰 cobro raw:",cobroRaw,"→",cobro,"ana:",ana);
     if(!cli)return;
     const key=ana+"|||"+cli;
     if(!map[key])map[key]={cli,ana,ops:0,fac:0};
