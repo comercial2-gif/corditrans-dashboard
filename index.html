@@ -624,8 +624,9 @@ function procesarCliAnalistas(filas,mesNum){
     const esUrbano=origen.includes("CARTAGENA")&&destino.includes("CARTAGENA");
     const tipo=esUrbano?"URBANOS":"NACIONAL";
 
-    // Valor del cobro — TOTAL ANALISTAS tiene pesos enteros con formato colombiano
-    const cobro=pMoneyRaw(r["# COBRO REMESA"]||r["COBRO REMESA"]||"0");
+    const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
+    // CSV exporta en miles de pesos (ej: "790" = $790.000 reales)
+    const cobro=pMoneyRaw(cobroRaw)*1000;
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
