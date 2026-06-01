@@ -643,19 +643,6 @@ function procesarCliAnalistas(filas,mesNum){
   }));
 }
 
-    const key=ana+"|||"+cli;
-    if(!map[key])map[key]={cli,ana,ops:0,fac:0};
-    // Buscar la columna de operaciones con los nombres que puede tener en tu Sheet
-    const opsVal=r["OPS"]||r["OPERACIONES"]||r["ops"]||r["CANT"]||r["CANTIDAD"]||r["NUM OPS"]||r["# OPS"]||r["No. OPS"]||"";
-    const opsNum=parseInt(String(opsVal).replace(/[^0-9]/g,""))||0;
-    // Si la hoja trae el dato de ops, acumularlo; si no, cada fila cuenta como 1 operación
-    map[key].ops+=opsNum>0?opsNum:1;
-    map[key].fac+=cobro;
-  });
-  // RESUMEN no tiene ops individuales, usar facturado como proxy
-  return Object.values(map).map(d=>({nombre:d.cli,analista:d.ana,ops:d.ops||1,facturado:d.fac}));
-}
-
 // ── CARGA PRINCIPAL ──
 async function cargarSheet(id){
   let filasSeg=[];
