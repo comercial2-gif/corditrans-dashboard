@@ -587,8 +587,14 @@ function procesarCliAnalistas(filas,mesNum){
   let f=filas;
   if(mesNum>0){
     f=filas.filter(r=>{
-      const mes=parseInt(r["MES"]||r["mes"]||"0");
-      return mes===mesNum;
+      // Intentar columna MES primero, si no extraer de FECHA
+      const mesCol=parseInt(r["MES"]||r["mes"]||"0");
+      if(mesCol>0) return mesCol===mesNum;
+      // Extraer mes de la fecha (formato DD/MM/YYYY o YYYY-MM-DD)
+      const fechaStr=(r["FECHA"]||"").trim();
+      if(!fechaStr) return false;
+      const mesF=parseFecha(fechaStr)?.getMonth()+1||0;
+      return mesF===mesNum;
     });
   }
   // Filtro de rango adicional
@@ -1383,7 +1389,12 @@ function renderAnalistas(clientes,analistas){
     el.innerHTML="";
     sorted.forEach(a=>{
       const pMeta=a.meta>0?Math.round((a.tR/a.meta)*100):0;
-      const esperadoHoy=esMesActual2?a.meta*PROG:a.meta;
+      // Si es el mes actual: esperado = meta / días del mes × día de hoy
+      // Si es mes pasado (ya cerró): esperado = meta completa
+      const now2=new Date();
+      const diasDelMes=new Date(now2.getFullYear(),now2.getMonth()+1,0).getDate();
+      const diaActual=now2.getDate();
+      const esperadoHoy=a.meta>0?(esMesActual2?(a.meta/diasDelMes)*diaActual:a.meta):0;
       const pEsp=esperadoHoy>0?Math.round((a.tR/esperadoHoy)*100):0;
       const colMeta=bc(pMeta),colEsp=bc(pEsp);
       const marcador=Math.round(PROG*100);
