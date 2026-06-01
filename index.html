@@ -862,7 +862,7 @@ function renderFlota(seg){
         <td>${v.estado==="PARO"?`<span class="chip r">${v.oo>0?v.oo+"d ":""}Paro</span>`:`<span class="chip ${s.c}">${s.l}</span>`}</td>
         <td class="bar-td"><div class="bar-bg"><div class="bar-fg" data-w="${bw}" style="background:${bc(p)};width:0%"></div></div></td>
         <td class="num">${fmt(v.real)}</td><td class="num" style="color:var(--muted2)">${fmt(esperadoV)}</td><td class="num">${fmt(v.meta)}</td>
-        <td class="pct-td" style="color:${bc(p)}">${p}%</td><td class="pct-td" style="color:${bc(p)};font-size:10px">${v.meta>0?Math.round((v.real/(v.meta*PROG||1))*100)+"%" :"—"}</td></tr>`;
+        <td class="pct-td" style="color:${bc(p)}">${p}%</td><td class="pct-td" style="color:${esperadoV>0?bc(Math.round((v.real/esperadoV)*100)):bc(0)};font-size:10px">${esperadoV>0?Math.round((v.real/esperadoV)*100)+"%" :"—"}</td></tr>`;
     });
   }
   const ol=document.getElementById("oos-list");
