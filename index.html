@@ -629,7 +629,7 @@ function procesarCliAnalistas(filas,mesNum){
 
     const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
     // CSV exporta en miles de pesos (ej: "790" = $790.000 reales)
-    const cobro=pMoneyRaw(cobroRaw)*1000;
+    const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
