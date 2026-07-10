@@ -645,8 +645,8 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["PAGO REMESA"]||r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
-    // TOTAL ANALISTAS trae valores en pesos completos (ej: "740000" = $740.000)
-    const cobro=pMoneyRaw(cobroRaw);
+    // TOTAL ANALISTAS trae PAGO REMESA en miles (ej: "725.2" = $725.200)
+    const cobro=pMoneyRaw(cobroRaw)*1000;
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
@@ -1377,7 +1377,7 @@ function renderClientes(clientes){
       const cli=(r["CLIENTE"]||"").trim();if(!cli)return;
       const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
       const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-      const pago=pMoneyRaw(r["PAGO REMESA"]||r["# COBRO REMESA"]||r["COBRO REMESA"]||"0");
+      const pago=pMoneyRaw(r["PAGO REMESA"]||r["# COBRO REMESA"]||r["COBRO REMESA"]||"0")*1000;
       if(pago<=0) return;
       const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
       if(!mapUN[cli]) mapUN[cli]={nombre:cli,urb:0,nac:0};
