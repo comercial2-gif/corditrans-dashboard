@@ -645,6 +645,7 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
+    if(!map[ana+"|||diagnost"]){map[ana+"|||diagnost"]=1;console.log("🔍 COBRO RAW sample:",JSON.stringify(cobroRaw),"→ pMoneyRaw:",pMoneyRaw(cobroRaw));}
     // TOTAL ANALISTAS: COBRO REMESA en pesos completos (ej: "740000" = $740.000)
     const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
