@@ -350,6 +350,23 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       </div>
     </div>
   </div>
+
+  <!-- TABLA URBANO vs NACIONAL -->
+  <div class="card" style="margin-top:10px;">
+    <div class="card-head">
+      <div class="card-title"><span class="dot-t" style="background:var(--green)"></span>Facturación por Cliente — Urbano vs Nacional</div>
+    </div>
+    <table class="ftbl">
+      <thead><tr>
+        <th>Cliente</th>
+        <th class="r" style="color:var(--blue)">🔵 Urbano</th>
+        <th class="r" style="color:var(--accent)">🟡 Nacional</th>
+        <th class="r">Total</th>
+      </tr></thead>
+      <tbody id="tabla-urb-nac"></tbody>
+    </table>
+  </div>
+
 </div>
 
 <!-- ANALISTAS -->
@@ -627,8 +644,8 @@ function procesarCliAnalistas(filas,mesNum){
     // Tipo según la hoja ANALISTAS — ya clasificado por Eduardo
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
-    const cobroRaw=r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
-    // CSV exporta en miles de pesos (ej: "790" = $790.000 reales)
+    const cobroRaw=r["PAGO REMESA"]||r["# COBRO REMESA"]||r["COBRO REMESA"]||"0";
+    // TOTAL ANALISTAS trae valores en pesos completos (ej: "740000" = $740.000)
     const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
@@ -1342,6 +1359,39 @@ function renderClientes(clientes){
   document.getElementById("torta-legend").innerHTML=td.map((c,i)=>{const pct=Math.round((c.facturado/totT)*100),col=TC[i%TC.length];
     return`<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div><div style="font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div><div style="font-family:DM Mono;font-size:10px;color:var(--muted2);flex-shrink:0">${fmt(c.facturado)}</div><div style="font-family:DM Mono;font-size:11px;font-weight:600;color:${col};flex-shrink:0;width:30px;text-align:right">${pct}%</div></div>`;
   }).join("");
+
+  // ── TABLA URBANO vs NACIONAL: lee ORIGEN/DESTINO de ALL_FILAS, filtra por mes ──
+  const tabUrNac=document.getElementById("tabla-urb-nac");
+  if(tabUrNac&&ALL_FILAS.length){
+    const mesNombreActual=(MES_CLI||"").toUpperCase();
+    const mesNumActual=MESES.findIndex(m=>m.toUpperCase()===mesNombreActual)+1||0;
+    const filasFilt=ALL_FILAS.filter(r=>{
+      if(mesNumActual>0){
+        const d=parseFecha(r["FECHA"]||"");
+        if(d&&(d.getMonth()+1)!==mesNumActual) return false;
+      }
+      return (r["CLIENTE"]||"").trim()!=="";
+    });
+    const mapUN={};
+    filasFilt.forEach(r=>{
+      const cli=(r["CLIENTE"]||"").trim();if(!cli)return;
+      const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+      const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+      const pago=pMoneyRaw(r["PAGO REMESA"]||r["# COBRO REMESA"]||r["COBRO REMESA"]||"0");
+      if(pago<=0) return;
+      const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
+      if(!mapUN[cli]) mapUN[cli]={nombre:cli,urb:0,nac:0};
+      if(esUrbano) mapUN[cli].urb+=pago;
+      else mapUN[cli].nac+=pago;
+    });
+    const rows=Object.values(mapUN).filter(c=>c.urb>0||c.nac>0).sort((a,b)=>(b.urb+b.nac)-(a.urb+a.nac));
+    tabUrNac.innerHTML=rows.map(c=>`<tr>
+      <td style="font-size:12px;font-weight:500;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</td>
+      <td class="num" style="color:var(--blue)">${c.urb>0?fmt(c.urb):"—"}</td>
+      <td class="num" style="color:var(--accent)">${c.nac>0?fmt(c.nac):"—"}</td>
+      <td class="num">${fmt(c.urb+c.nac)}</td>
+    </tr>`).join("");
+  }
 }
 
 // ── kpiStrip: bloque de KPIs para un grupo de analistas ──
