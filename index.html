@@ -645,8 +645,8 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
-    // RESUMEN exporta en miles de pesos (ej: "790" = $790.000)
-    const cobro=pMoneyRaw(cobroRaw)*1000;
+    // TOTAL ANALISTAS: COBRO REMESA en pesos completos (ej: "740000" = $740.000)
+    const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
@@ -681,8 +681,8 @@ async function cargarSheet(id){
     fetchOpc(id,"TOTAL ANALISTAS").catch(()=>[]),
   ]);
   SEG_DATA=procesarSeg(filasSeg);
-  ALL_FILAS=filasTA;           // RESUMEN → para clientes/analistas (facturación)
-  TOTAL_FILAS=filasTotalAna;   // TOTAL ANALISTAS → para origen/destino urbano/nacional
+  ALL_FILAS=filasTotalAna.length>0?filasTotalAna:filasTA; // TOTAL ANALISTAS primero, RESUMEN como fallback
+  TOTAL_FILAS=filasTotalAna; // TOTAL ANALISTAS para tabla urbano/nacional
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
