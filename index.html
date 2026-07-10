@@ -463,21 +463,30 @@ function bc(p){if(p>=90)return"var(--green)";if(p>=70)return"var(--yellow)";retu
 // pMoneyRaw: convierte string a número en pesos, SIN multiplicar por millón
 // Usar para valores que ya vienen en pesos enteros (ej: TOTAL ANALISTAS)
 function pMoneyRaw(v){
-  if(!v)return 0;
-  const s=String(v).replace(/[$\s]/g,"");
+  if(!v&&v!==0)return 0;
+  const s=String(v).replace(/[$\s]/g,"").trim();
+  if(!s||s==="-")return 0;
+  // Formato colombiano: "390,000" = 390000 / "1.200.000" = 1200000 / "725.2" = 725.2
   const puntos=(s.match(/\./g)||[]).length;
+  const comas=(s.match(/,/g)||[]).length;
   let num;
-  if(puntos>1){
-    num=parseFloat(s.replace(/\./g,"").replace(/,/g,"."))||0;
+  if(comas>0&&puntos===0){
+    // "390,000" o "1,200,000" → separador de miles con coma
+    num=parseFloat(s.replace(/,/g,""))||0;
+  } else if(puntos>1){
+    // "1.200.000" → separador de miles con punto
+    num=parseFloat(s.replace(/\./g,""))||0;
   } else if(puntos===1){
     const partes=s.split(".");
     if(partes[1]&&partes[1].length===3){
+      // "390.000" → separador de miles
       num=parseFloat(s.replace(/\./g,""))||0;
     } else {
+      // "725.2" → decimal real
       num=parseFloat(s)||0;
     }
   } else {
-    num=parseFloat(s.replace(/,/g,"."))||0;
+    num=parseFloat(s)||0;
   }
   return num;
 }
@@ -1312,10 +1321,11 @@ function renderClientes(clientes){
   // Tabla unificada por nombre de cliente
   const mapaUnif={};
   clientes.forEach(c=>{
-    const key=c.nombre.trim();
+    const key=(c.nombre||"").trim();
+    if(!key)return;
     if(!mapaUnif[key]) mapaUnif[key]={nombre:key,ops:0,facturado:0,analistas:new Set()};
-    mapaUnif[key].ops+=c.ops;
-    mapaUnif[key].facturado+=c.facturado;
+    mapaUnif[key].ops+=c.ops||0;
+    mapaUnif[key].facturado+=c.facturado||0;
     if(c.analista) mapaUnif[key].analistas.add(c.analista.split(" ")[0]);
   });
   const sorted=Object.values(mapaUnif).sort((a,b)=>b.facturado-a.facturado);
