@@ -671,8 +671,8 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
-    // RESUMEN exporta en miles de pesos (ej: "790" = $790.000)
-    const cobro=pMoneyRaw(cobroRaw)*1000;
+    // RESUMEN trae COBRO REMESA en pesos completos (ej: "19530000" = $19.530.000)
+    const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
