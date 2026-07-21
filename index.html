@@ -671,7 +671,8 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
-    // RESUMEN trae COBRO REMESA en pesos completos (ej: "19530000" = $19.530.000)
+    // Detectar fuente: RESUMEN tiene columna MES, TOTAL ANALISTAS tiene FECHA y ORIGEN
+    const esTotalAna=!!(r["ORIGEN"]||r["DESTINO"]);
     const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
@@ -810,13 +811,15 @@ function limpiarFiltro(){
 }
 
 function renderCliAnalistas(){
-  // Convertir MES_CLI (nombre como "MAYO") a número de mes (1-12)
-  // parseInt("MAYO") = 0, por eso el filtro nunca funcionaba — esto lo corrige
   const mesNombre=(MES_CLI||'').trim().toUpperCase();
-  const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1; // 0 si no encuentra → sin filtro
-  const clientes=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
+  const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1;
+  // Clientes: TOTAL_FILAS tiene ORIGEN/DESTINO para separar urbano/nacional
+  // Analistas: ALL_FILAS (RESUMEN) tiene totales correctos por analista
+  const fuenteCli=TOTAL_FILAS.length>0?TOTAL_FILAS:ALL_FILAS;
+  const clientes=MODO==="live"?procesarCliAnalistas(fuenteCli,mesNum):DEMO_CLI;
+  const clientesAna=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
-  if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
+  if(document.getElementById("kpi-analistas"))renderAnalistas(clientesAna,ANALISTAS_DATA);
 }
 
 function actualizarHeader(){
