@@ -1599,18 +1599,22 @@ function renderResumen(){
   const tipoAna={};
   (ANALISTAS_DATA||[]).forEach(a=>{tipoAna[(a.nombre||"").toUpperCase()]=(a.tipo||"URBANOS").toUpperCase();});
 
-  // ── MATRICES ANALISTAS: Urbanos y Nacional por separado ──
+  // ── MATRICES ANALISTAS: clasificar por ORIGEN/DESTINO de cada operación ──
   const mapaAna={URBANOS:{},NACIONAL:{}};
-  ALL_FILAS.forEach(r=>{
+  const fuenteAna=TOTAL_FILAS.length>0?TOTAL_FILAS:[];
+  fuenteAna.forEach(r=>{
     const ana=(r["ANALISTA"]||"").trim();if(!ana)return;
-    const mes=parseInt(r["MES"]||"0");if(!mes)return;
     const cobro=pMoneyRaw(r["COBRO REMESA"]||"0");if(!cobro)return;
-    const ops=parseInt(r["OPS"]||r["OPERACIONES"]||"1")||1;
-    const tipo=tipoAna[ana.toUpperCase()]||"URBANOS";
+    const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const esUrbano=origen==="CARTAGENA"&&destino==="CARTAGENA";
+    const tipo=esUrbano?"URBANOS":"NACIONAL";
+    const d=parseFecha(r["FECHA"]||"");
+    const mes=d?d.getMonth()+1:0;if(!mes)return;
     if(!mapaAna[tipo][ana])mapaAna[tipo][ana]={};
     if(!mapaAna[tipo][ana][mes])mapaAna[tipo][ana][mes]={v:0,ops:0};
     mapaAna[tipo][ana][mes].v+=cobro;
-    mapaAna[tipo][ana][mes].ops+=ops;
+    mapaAna[tipo][ana][mes].ops+=1;
   });
 
   function buildMatrizAna(mapa, titulo, color){
