@@ -573,15 +573,17 @@ async function fetchCSV(id,hoja){
 async function fetchOpc(id,hoja){try{return await fetchCSV(id,hoja);}catch{return[];}}
 
 async function fetchTotalAnalistasHistorico(id){
-  // Trae FECHA, CLIENTE, ORIGEN, DESTINO, COBRO REMESA, ANALISTA de todos los meses 2025+
-  const tq=encodeURIComponent(`SELECT A,C,E,F,O,Y WHERE A IS NOT NULL AND YEAR(A) >= 2025 LABEL A 'FECHA', C 'CLIENTE', E 'ORIGEN', F 'DESTINO', O 'COBRO REMESA', Y 'ANALISTA'`);
+  // Trae todas las filas con las columnas necesarias para el histórico
+  const tq=encodeURIComponent(`SELECT A,C,E,F,O,Y WHERE C IS NOT NULL LABEL A 'FECHA', C 'CLIENTE', E 'ORIGEN', F 'DESTINO', O 'COBRO REMESA', Y 'ANALISTA'`);
   const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&tq=${tq}`;
   try{
     const r=await fetch(url);if(!r.ok)return[];
     const txt=await r.text();
     if(!txt.trim()||txt.trim().startsWith("<"))return[];
-    return parsearCSV(txt);
-  }catch{return[];}
+    const filas=parsearCSV(txt);
+    console.log("🔍 HIST_FILAS cargadas:",filas.length, filas[0]);
+    return filas;
+  }catch(e){console.error("Error fetchHistorico:",e);return[];}
 }
 
 async function fetchTotalAnalistasMes(id, mesNum){
