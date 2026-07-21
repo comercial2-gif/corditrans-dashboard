@@ -466,20 +466,27 @@ function pMoneyRaw(v){
   if(!v&&v!==0)return 0;
   const s=String(v).replace(/[$\s]/g,"").trim();
   if(!s||s==="-")return 0;
-  // Formato colombiano: "390,000" = 390000 / "1.200.000" = 1200000 / "725.2" = 725.2
   const puntos=(s.match(/\./g)||[]).length;
   const comas=(s.match(/,/g)||[]).length;
   let num;
-  if(comas>0&&puntos===0){
-    // "390,000" o "1,200,000" → separador de miles con coma
+  if(comas>0&&puntos===1){
+    // "900,000.00" → coma como miles, punto como decimal
+    const partesDec=s.split(".");
+    if(partesDec[1]&&partesDec[1].length===2){
+      num=parseFloat(s.replace(/,/g,""))||0;
+    } else {
+      num=parseFloat(s.replace(/,/g,""))||0;
+    }
+  } else if(comas>0&&puntos===0){
+    // "390,000" → coma como separador de miles
     num=parseFloat(s.replace(/,/g,""))||0;
   } else if(puntos>1){
-    // "1.200.000" → separador de miles con punto
+    // "1.200.000" → punto como separador de miles
     num=parseFloat(s.replace(/\./g,""))||0;
   } else if(puntos===1){
     const partes=s.split(".");
     if(partes[1]&&partes[1].length===3){
-      // "390.000" → separador de miles
+      // "390.000" → punto como separador de miles
       num=parseFloat(s.replace(/\./g,""))||0;
     } else {
       // "725.2" → decimal real
@@ -627,14 +634,13 @@ function procesarCliAnalistas(filas,mesNum){
   // Filtrar por mes: RESUMEN tiene columna MES (número), TOTAL ANALISTAS tiene FECHA
   if(mesNum>0){
     f=filas.filter(r=>{
-      // Intentar columna MES primero (RESUMEN)
+      // TOTAL_FILAS viene pre-filtrado por mes desde gviz — si no tiene FECHA ni MES, aceptar todo
       const mesCol=(r["MES"]||r["mes"]||"").trim();
       if(mesCol) return parseInt(mesCol)===mesNum;
-      // Si no hay columna MES, usar FECHA (TOTAL ANALISTAS)
       const fechaStr=(r["FECHA"]||"").trim();
-      if(!fechaStr) return false;
+      if(!fechaStr) return true; // sin fecha = ya filtrado por gviz
       const d=parseFecha(fechaStr);
-      return d?(d.getMonth()+1)===mesNum:false;
+      return d?(d.getMonth()+1)===mesNum:true;
     });
   }
 
