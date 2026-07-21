@@ -549,47 +549,16 @@ async function fetchCSV(id,hoja){
 async function fetchOpc(id,hoja){try{return await fetchCSV(id,hoja);}catch{return[];}}
 
 async function fetchTotalAnalistasMes(id, mesNum){
-  let headers=null, todas=[], pagina=0;
-  while(pagina<20){
-    // Primera página incluye fila de headers; páginas siguientes no
-    const inicio=pagina===0?1:pagina*1000+2;
-    const fin=(pagina+1)*1000+1;
-    const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&range=A${inicio}:Z${fin}`;
-    try{
-      const r=await fetch(url);if(!r.ok)break;
-      const txt=await r.text();
-      if(!txt.trim()||txt.trim().startsWith("<"))break;
-      const lines=txt.trim().split("\n");
-      if(!lines.length)break;
-      if(pagina===0){
-        // Página 0: tiene headers
-        const parsed=parsearCSV(txt);
-        if(!parsed.length)break;
-        headers=Object.keys(parsed[0]);
-        todas=todas.concat(parsed);
-        if(parsed.length<1000)break;
-      } else {
-        // Páginas siguientes: sin headers, usamos los guardados
-        if(!headers)break;
-        const filas=lines.map(l=>{
-          const cols=[];let cur="",inQ=false;
-          for(const ch of l){if(ch==='"'){inQ=!inQ;}else if(ch===","&&!inQ){cols.push(cur.trim());cur="";}else{cur+=ch;}}
-          cols.push(cur.trim());
-          const obj={};headers.forEach((h,i)=>{obj[h]=(cols[i]||"").replace(/"/g,"").trim();});
-          return obj;
-        }).filter(r=>(r[headers[0]]||"").trim());
-        if(!filas.length)break;
-        todas=todas.concat(filas);
-        if(filas.length<1000)break;
-      }
-    }catch{break;}
-    pagina++;
-  }
-  if(!mesNum)return todas;
-  return todas.filter(r=>{
-    const d=parseFecha(r["FECHA"]||"");
-    return d&&(d.getMonth()+1)===mesNum;
-  });
+  // Usa gviz/tq con WHERE para filtrar por mes directamente — evita límite de 1000 filas
+  // Columna A = FECHA, C = CLIENTE, O = COBRO REMESA, E = ORIGEN, F = DESTINO, Y = ANALISTA
+  const tq=encodeURIComponent(`SELECT A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y WHERE A IS NOT NULL AND MONTH(A)+1=${mesNum}`);
+  const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&tq=${tq}`;
+  try{
+    const r=await fetch(url);if(!r.ok)return[];
+    const txt=await r.text();
+    if(!txt.trim()||txt.trim().startsWith("<"))return[];
+    return parsearCSV(txt);
+  }catch{return[];}
 }
 
 function parsearCSV(txt){
@@ -655,9 +624,13 @@ function procesarSeg(filas){
 function procesarCliAnalistas(filas,mesNum){
   let f=filas;
 
-  // Filtrar por mes usando columna FECHA (formato DD/MM/YYYY)
+  // Filtrar por mes: RESUMEN tiene columna MES (número), TOTAL ANALISTAS tiene FECHA
   if(mesNum>0){
     f=filas.filter(r=>{
+      // Intentar columna MES primero (RESUMEN)
+      const mesCol=(r["MES"]||r["mes"]||"").trim();
+      if(mesCol) return parseInt(mesCol)===mesNum;
+      // Si no hay columna MES, usar FECHA (TOTAL ANALISTAS)
       const fechaStr=(r["FECHA"]||"").trim();
       if(!fechaStr) return false;
       const d=parseFecha(fechaStr);
