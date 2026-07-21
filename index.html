@@ -549,22 +549,43 @@ async function fetchCSV(id,hoja){
 async function fetchOpc(id,hoja){try{return await fetchCSV(id,hoja);}catch{return[];}}
 
 async function fetchTotalAnalistasMes(id, mesNum){
-  // Descarga TOTAL ANALISTAS completo y filtra por mes en JS
-  // gviz sin límite explícito puede cortar a 1000 — usamos offset para paginar
-  let todas=[], offset=0, pageSize=1000;
-  while(true){
-    const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&range=A${offset===0?1:offset+2}:Z${offset+pageSize+1}`;
+  let headers=null, todas=[], pagina=0;
+  while(pagina<20){
+    // Primera página incluye fila de headers; páginas siguientes no
+    const inicio=pagina===0?1:pagina*1000+2;
+    const fin=(pagina+1)*1000+1;
+    const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&range=A${inicio}:Z${fin}`;
     try{
       const r=await fetch(url);if(!r.ok)break;
-      const txt=await r.text();if(txt.trim().startsWith("<"))break;
-      const filas=parsearCSV(txt);
-      if(filas.length===0)break;
-      // Primera página incluye headers; las siguientes no
-      todas=todas.concat(offset===0?filas:filas);
-      if(filas.length<pageSize)break;
-      offset+=pageSize;
+      const txt=await r.text();
+      if(!txt.trim()||txt.trim().startsWith("<"))break;
+      const lines=txt.trim().split("\n");
+      if(!lines.length)break;
+      if(pagina===0){
+        // Página 0: tiene headers
+        const parsed=parsearCSV(txt);
+        if(!parsed.length)break;
+        headers=Object.keys(parsed[0]);
+        todas=todas.concat(parsed);
+        if(parsed.length<1000)break;
+      } else {
+        // Páginas siguientes: sin headers, usamos los guardados
+        if(!headers)break;
+        const filas=lines.map(l=>{
+          const cols=[];let cur="",inQ=false;
+          for(const ch of l){if(ch==='"'){inQ=!inQ;}else if(ch===","&&!inQ){cols.push(cur.trim());cur="";}else{cur+=ch;}}
+          cols.push(cur.trim());
+          const obj={};headers.forEach((h,i)=>{obj[h]=(cols[i]||"").replace(/"/g,"").trim();});
+          return obj;
+        }).filter(r=>(r[headers[0]]||"").trim());
+        if(!filas.length)break;
+        todas=todas.concat(filas);
+        if(filas.length<1000)break;
+      }
     }catch{break;}
+    pagina++;
   }
+  if(!mesNum)return todas;
   return todas.filter(r=>{
     const d=parseFecha(r["FECHA"]||"");
     return d&&(d.getMonth()+1)===mesNum;
@@ -677,9 +698,8 @@ function procesarCliAnalistas(filas,mesNum){
     const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
-    if(!map[ana+"|||diagnost"]){map[ana+"|||diagnost"]=1;console.log("🔍 COBRO RAW sample:",JSON.stringify(cobroRaw),"→ pMoneyRaw:",pMoneyRaw(cobroRaw));}
-    // TOTAL ANALISTAS: COBRO REMESA en pesos completos (ej: "740000" = $740.000)
-    const cobro=pMoneyRaw(cobroRaw);
+    // RESUMEN exporta en miles de pesos (ej: "790" = $790.000)
+    const cobro=pMoneyRaw(cobroRaw)*1000;
     if(cobro<=0) return;
 
     const key=ana+"|||"+cli;
@@ -708,15 +728,15 @@ async function cargarSheet(id){
     console.warn("Hoja de flota no encontrada:",MES_FLOTA);
   }
   const mesNumCarga=MESES.findIndex(m=>m.toUpperCase()===(MES_CLI||"").toUpperCase())+1||new Date().getMonth()+1;
-  const [filasTA,filasAna,filasComb,filasTotalAna]=await Promise.all([
+  const [filasTA,filasAna,filasComb]=await Promise.all([
     fetchCSV(id,"RESUMEN").catch(()=>[]),
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
     fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
-    fetchTotalAnalistasMes(id, mesNumCarga).catch(()=>[]),
   ]);
+  const filasTotalAna=await fetchTotalAnalistasMes(id, mesNumCarga).catch(()=>[]);
   SEG_DATA=procesarSeg(filasSeg);
-  ALL_FILAS=filasTotalAna.length>0?filasTotalAna:filasTA; // TOTAL ANALISTAS filtrado por mes primero
-  TOTAL_FILAS=filasTotalAna; // TOTAL ANALISTAS para tabla urbano/nacional
+  ALL_FILAS=filasTA; // RESUMEN para clientes/analistas
+  TOTAL_FILAS=filasTotalAna; // TOTAL ANALISTAS filtrado por mes para tabla urbano/nacional
   ANALISTAS_DATA=filasAna.length
     ?filasAna.filter(r=>(r["ANALISTA"]||r["NOMBRE"]||"").trim()).map((r,i)=>({nombre:(r["ANALISTA"]||r["NOMBRE"]||"").trim(),meta:pMoney(r["META MES"]||r["META"]||"0"),tipo:(r["TIPO"]||r["tipo"]||"").trim().toUpperCase(),color:r["COLOR"]?(r["COLOR"].startsWith("#")?r["COLOR"]:"#"+r["COLOR"]):TC[i%TC.length]}))
     :[...new Set(SEG_DATA.map(v=>v.analista).filter(a=>a&&a!=="Sin asignar"))].map((n,i)=>({nombre:n,meta:0,color:TC[i%TC.length]}));
