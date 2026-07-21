@@ -704,16 +704,22 @@ function procesarCliAnalistas(filas,mesNum){
     const ana=(r["ANALISTA"]||"").trim();
     if(!cli||!ana) return;
 
-    // Tipo según la hoja ANALISTAS — ya clasificado por Eduardo
-    const tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
+    // Tipo: si hay ORIGEN/DESTINO (TOTAL ANALISTAS), clasificar por operación
+    // Si no (RESUMEN), usar tipo del analista
+    let tipo;
+    const origen=(r["ORIGEN"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const destino=(r["DESTINO"]||"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    if(origen&&destino){
+      tipo=origen==="CARTAGENA"&&destino==="CARTAGENA"?"URBANOS":"NACIONAL";
+    } else {
+      tipo=tipoAna[ana.toUpperCase().trim()]||"URBANOS";
+    }
 
     const cobroRaw=r["COBRO REMESA"]||r["# COBRO REMESA"]||"0";
-    // Detectar fuente: RESUMEN tiene columna MES, TOTAL ANALISTAS tiene FECHA y ORIGEN
-    const esTotalAna=!!(r["ORIGEN"]||r["DESTINO"]);
     const cobro=pMoneyRaw(cobroRaw);
     if(cobro<=0) return;
 
-    const key=ana+"|||"+cli;
+    const key=ana+"|||"+cli+"|||"+tipo;
     if(!map[key]) map[key]={cli,ana,ops:0,fac:0,tipo};
     map[key].ops++;
     map[key].fac+=cobro;
