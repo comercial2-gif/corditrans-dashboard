@@ -858,15 +858,11 @@ function limpiarFiltro(){
 function renderCliAnalistas(){
   const mesNombre=(MES_CLI||'').trim().toUpperCase();
   const mesNum=MESES.findIndex(m=>m.toUpperCase()===mesNombre)+1;
-  // Clientes: TOTAL_FILAS tiene ORIGEN/DESTINO para separar urbano/nacional
-  // Analistas: ALL_FILAS (RESUMEN) tiene totales correctos por analista
-  const fuenteCli=TOTAL_FILAS.length>0?TOTAL_FILAS:ALL_FILAS;
-  console.log("🔍 TOTAL_FILAS:",TOTAL_FILAS.length, TOTAL_FILAS[0]);
-  console.log("🔍 ALL_FILAS:",ALL_FILAS.length, ALL_FILAS[0]);
-  const clientes=MODO==="live"?procesarCliAnalistas(fuenteCli,mesNum):DEMO_CLI;
-  const clientesAna=MODO==="live"?procesarCliAnalistas(ALL_FILAS,mesNum):DEMO_CLI;
+  // Usar TOTAL_FILAS para todo — tiene ORIGEN/DESTINO y los valores correctos
+  const fuente=TOTAL_FILAS.length>0?TOTAL_FILAS:ALL_FILAS;
+  const clientes=MODO==="live"?procesarCliAnalistas(fuente,mesNum):DEMO_CLI;
   if(document.getElementById("kpi-clientes"))renderClientes(clientes);
-  if(document.getElementById("kpi-analistas"))renderAnalistas(clientesAna,ANALISTAS_DATA);
+  if(document.getElementById("kpi-analistas"))renderAnalistas(clientes,ANALISTAS_DATA);
 }
 
 function actualizarHeader(){
