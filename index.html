@@ -587,15 +587,18 @@ async function fetchTotalAnalistasHistorico(id){
 }
 
 async function fetchTotalAnalistasMes(id, mesNum){
-  // Usa gviz/tq con WHERE para filtrar por mes directamente — evita límite de 1000 filas
-  // Columna A = FECHA, C = CLIENTE, O = COBRO REMESA, E = ORIGEN, F = DESTINO, Y = ANALISTA
-  const tq=encodeURIComponent(`SELECT A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y WHERE A IS NOT NULL AND MONTH(A)+1=${mesNum}`);
+  // Usar mismo SELECT que histórico — columnas mínimas, sin filtro de mes en gviz
+  const tq=encodeURIComponent(`SELECT A,C,E,F,O,Y WHERE C IS NOT NULL LABEL A 'FECHA', C 'CLIENTE', E 'ORIGEN', F 'DESTINO', O 'COBRO REMESA', Y 'ANALISTA'`);
   const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("TOTAL ANALISTAS")}&tq=${tq}`;
   try{
     const r=await fetch(url);if(!r.ok)return[];
     const txt=await r.text();
     if(!txt.trim()||txt.trim().startsWith("<"))return[];
-    return parsearCSV(txt);
+    const filas=parsearCSV(txt);
+    return filas.filter(r=>{
+      const d=parseFecha(r["FECHA"]||"");
+      return d&&(d.getMonth()+1)===mesNum;
+    });
   }catch{return[];}
 }
 
@@ -750,10 +753,13 @@ async function cargarSheet(id){
     fetchOpc(id,"ANALISTAS").catch(()=>[]),
     fetchOpc(id,"COMBUSTIBLE").catch(()=>[]),
   ]);
-  const filasTotalAna=await fetchTotalAnalistasMes(id, mesNumCarga).catch(()=>[]);
   const filasHist=await fetchTotalAnalistasHistorico(id).catch(()=>[]);
+  const filasTotalAna=filasHist.filter(r=>{
+    const d=parseFecha(r["FECHA"]||"");
+    return d&&(d.getMonth()+1)===mesNumCarga;
+  });
   SEG_DATA=procesarSeg(filasSeg);
-  ALL_FILAS=filasTA; // RESUMEN para clientes/analistas
+  ALL_FILAS=filasTA;
   TOTAL_FILAS=filasTotalAna;
   HIST_FILAS=filasHist;
   ANALISTAS_DATA=filasAna.length
