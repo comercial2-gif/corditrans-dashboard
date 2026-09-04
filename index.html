@@ -236,11 +236,15 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 
   <!-- ── MÓDULO COMBUSTIBLE ── -->
   <div style="margin-top:18px;">
-    <!-- Separador visual -->
+    <!-- Separador visual con selector de mes -->
     <div style="margin-bottom:12px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--green);display:flex;align-items:center;gap:8px;">
       <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
       Combustible — Rendimiento de Flota
       <span style="flex:1;height:1px;background:rgba(31,200,118,.2);display:block;"></span>
+      <label style="font-size:9px;color:var(--muted2);letter-spacing:.5px;text-transform:none;">Mes</label>
+      <select id="sel-mes-comb" onchange="filtrarCombustible()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:10px;padding:3px 8px;font-family:'DM Mono';text-transform:none;letter-spacing:0;">
+        <option value="0">Todos</option>
+      </select>
       <span id="comb-estado-badge" style="font-size:9px;color:var(--muted2);letter-spacing:.5px;text-transform:none;">Cargando...</span>
     </div>
 
@@ -780,6 +784,8 @@ async function cargarSheet(id){
   COMB_DATA=filasComb;
   renderFlota(SEG_DATA);
   renderCombustible(COMB_DATA);   // módulo de combustible
+  poblarSelectorComb();
+  filtrarCombustible();
   renderCliAnalistas();
   setTimeout(animateBars,120);
 }
@@ -1139,11 +1145,15 @@ let COMB_DATA=[];   // filas crudas de la hoja COMBUSTIBLE
 let COMB_RES=[];    // filas del RESUMEN COMBUSTIBLE (una por placa)
 
 // Procesar filas brutas de la hoja COMBUSTIBLE para obtener stats por placa
-function procesarCombustible(filas){
-  // filas viene con encabezados: FECHA, PLACA, CONDUCTOR, CLIENTE,
-  // KM INICIAL, KM FINAL, KM RECORRIDOS, GALONES, VALOR TANQUEO ($), REND. KM/GAL, TIPO RUTA, OBSERVACIONES
+function procesarCombustible(filas, mesNum){
+  // mesNum: 0 = todos los meses, 1-12 = mes específico
+  const f=mesNum>0?filas.filter(r=>{
+    const d=parseFecha(r['FECHA']||'');
+    return d&&(d.getMonth()+1)===mesNum;
+  }):filas;
+
   const map={};
-  filas.forEach(r=>{
+  f.forEach(r=>{
     const placa=(r['PLACA']||'').trim().toUpperCase();
     if(!placa)return;
     const kmRec=parseFloat((r['KM RECORRIDOS']||'0').replace(/,/g,'.'))||0;
@@ -1173,9 +1183,13 @@ function procesarCombustible(filas){
 }
 
 // Procesar viajes nacionales (TIPO RUTA = VIAJE) agrupados por cliente
-function procesarViajesNac(filas){
+function procesarViajesNac(filas, mesNum){
+  const f=mesNum>0?filas.filter(r=>{
+    const d=parseFecha(r['FECHA']||'');
+    return d&&(d.getMonth()+1)===mesNum;
+  }):filas;
   const map={};
-  filas.forEach(r=>{
+  f.forEach(r=>{
     const tipo=(r['TIPO RUTA']||'').trim().toUpperCase();
     if(tipo!=='VIAJE')return;
     const cliente=(r['CLIENTE']||'').trim();
@@ -1201,8 +1215,31 @@ function colComb(estado){
   return estado==='verde'?'var(--green)':estado==='amarillo'?'var(--yellow)':'var(--red)';
 }
 
+// Filtrar combustible por mes seleccionado
+function filtrarCombustible(){
+  const sel=document.getElementById('sel-mes-comb');
+  const mesNum=parseInt(sel?.value||'0')||0;
+  renderCombustible(COMB_DATA, mesNum);
+}
+
+// Poblar selector de mes con los meses disponibles en COMB_DATA
+function poblarSelectorComb(){
+  const sel=document.getElementById('sel-mes-comb');
+  if(!sel||!COMB_DATA.length)return;
+  const mesesDisp=[...new Set(COMB_DATA.map(r=>{
+    const d=parseFecha(r['FECHA']||'');
+    return d?d.getMonth()+1:0;
+  }).filter(m=>m>0))].sort((a,b)=>a-b);
+  // Mes actual por defecto
+  const mesActual=new Date().getMonth()+1;
+  const mesPorDefecto=mesesDisp.includes(mesActual)?mesActual:(mesesDisp[mesesDisp.length-1]||0);
+  sel.innerHTML=`<option value="0">Todos</option>`+mesesDisp.map(m=>`<option value="${m}">${MESES[m-1]}</option>`).join('');
+  sel.value=String(mesPorDefecto);
+}
+
 // Renderizar el módulo de combustible completo en la pestaña Flota
-function renderCombustible(filas){
+function renderCombustible(filas, mesNum){
+  mesNum=mesNum||0;
   if(!filas||!filas.length){
     const badge=document.getElementById('comb-estado-badge');
     if(badge)badge.textContent='Sin datos de combustible';
@@ -1211,8 +1248,8 @@ function renderCombustible(filas){
     return;
   }
 
-  const datos=procesarCombustible(filas);
-  const viajes=procesarViajesNac(filas);
+  const datos=procesarCombustible(filas, mesNum);
+  const viajes=procesarViajesNac(filas, mesNum);
 
   // ── KPIs globales de flota ──
   const totalKm=datos.reduce((s,d)=>s+d.km,0);
