@@ -1154,7 +1154,7 @@ let COMB_RES=[];    // filas del RESUMEN COMBUSTIBLE (una por placa)
 function procesarCombustible(filas, mesNum){
   // mesNum: 0 = todos los meses, 1-12 = mes específico
   const f=mesNum>0?filas.filter(r=>{
-    const d=parseFecha(r['FECHA INICIO']||r['FECHA']||'');
+    const d=parseFecha(r['CORDIVEHÍCULOS – CONTROL DE COMBUSTIBLE FECHA INICIO']||r['FECHA FIN']||r['FECHA']||'');
     return d&&(d.getMonth()+1)===mesNum;
   }):filas;
 
@@ -1191,7 +1191,7 @@ function procesarCombustible(filas, mesNum){
 // Procesar viajes nacionales (TIPO RUTA = VIAJE) agrupados por cliente
 function procesarViajesNac(filas, mesNum){
   const f=mesNum>0?filas.filter(r=>{
-    const d=parseFecha(r['FECHA INICIO']||r['FECHA']||'');
+    const d=parseFecha(r['CORDIVEHÍCULOS – CONTROL DE COMBUSTIBLE FECHA INICIO']||r['FECHA FIN']||r['FECHA']||'');
     return d&&(d.getMonth()+1)===mesNum;
   }):filas;
   const map={};
@@ -1234,7 +1234,7 @@ function poblarSelectorComb(){
   const sel=document.getElementById('sel-mes-comb');
   if(!sel||!COMB_DATA.length)return;
   const mesesDisp=[...new Set(COMB_DATA.map(r=>{
-    const d=parseFecha(r['FECHA INICIO']||r['FECHA']||'');
+    const d=parseFecha(r['CORDIVEHÍCULOS – CONTROL DE COMBUSTIBLE FECHA INICIO']||r['FECHA FIN']||r['FECHA']||'');
     return d?d.getMonth()+1:0;
   }).filter(m=>m>0))].sort((a,b)=>a-b);
   const mesActual=new Date().getMonth()+1;
